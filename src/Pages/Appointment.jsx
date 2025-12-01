@@ -7,17 +7,15 @@ export default function AppointmentLanding() {
     phone: "",
     date: "",
     time: "",
-    vehicleMode: "On Foot", // NEW FIELD
+    vehicleMode: "On Foot",
   });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // SAVE TO LOCALSTORAGE
   const saveAppointment = () => {
     const existing = JSON.parse(localStorage.getItem("appointments_v1")) || [];
-
     const newAppointment = {
       id: Date.now(),
       name: form.name,
@@ -29,7 +27,6 @@ export default function AppointmentLanding() {
       status: "Pending",
       createdAt: new Date().toISOString(),
     };
-
     const updated = [...existing, newAppointment];
     localStorage.setItem("appointments_v1", JSON.stringify(updated));
   };
@@ -51,7 +48,7 @@ export default function AppointmentLanding() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="w-full max-w-lg bg-white shadow-xl p-8 rounded-2xl">
-        
+
         {/* Title */}
         <h1 className="text-3xl font-bold text-center text-green-700 mb-6">
           Book an Appointment
@@ -62,53 +59,53 @@ export default function AppointmentLanding() {
 
           {/* Full Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
+            <label className="block text-sm font-medium text-black">Full Name</label>
             <input
               type="text"
               name="name"
               required
               value={form.name}
               onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none"
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none text-black"
             />
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="block text-sm font-medium text-black">Email</label>
             <input
               type="email"
               name="email"
               required
               value={form.email}
               onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none"
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none text-black"
             />
           </div>
 
           {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+            <label className="block text-sm font-medium text-black">Phone Number</label>
             <input
               type="text"
               name="phone"
               required
               value={form.phone}
               onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none"
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none text-black"
             />
           </div>
 
           {/* Vehicle Mode */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-black">
               How will you arrive?
             </label>
             <select
               name="vehicleMode"
               value={form.vehicleMode}
               onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none"
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none text-black"
             >
               <option value="On Foot">On Foot</option>
               <option value="Motorcycle">Motorcycle</option>
@@ -120,27 +117,27 @@ export default function AppointmentLanding() {
 
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Preferred Date</label>
+            <label className="block text-sm font-medium text-black">Preferred Date</label>
             <input
               type="date"
               name="date"
               required
               value={form.date}
               onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none"
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none text-black"
             />
           </div>
 
           {/* Time */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Preferred Time</label>
+            <label className="block text-sm font-medium text-black">Preferred Time</label>
             <input
               type="time"
               name="time"
               required
               value={form.time}
               onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none"
+              className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-green-600 focus:outline-none text-black"
             />
           </div>
 

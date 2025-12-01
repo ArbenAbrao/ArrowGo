@@ -159,44 +159,90 @@ const handleAddType = (e) => {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white shadow rounded-lg p-4 mb-6 border-t-4 border-green-600">
-          <div className="grid md:grid-cols-4 gap-4 items-end">
-            {/* Date */}
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Date</label>
-              <input type="date" value={filterDate} onChange={e=>setFilterDate(e.target.value)} className="border rounded px-3 py-2 w-full" />
-            </div>
-            {/* Status */}
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Status</label>
-              <div className="flex gap-2">
-                {["ALL","IN","OUT"].map(s=><button key={s} onClick={()=>setFilterStatus(s)} className={`px-3 py-2 rounded ${filterStatus===s?"bg-green-600 text-white":"bg-white border text-gray-700"}`}>{s}</button>)}
-              </div>
-            </div>
-            {/* Search */}
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Search (type / driver / plate)</label>
-              <div className="flex gap-2">
-                <input type="text" placeholder="Search..." value={searchText} onChange={e=>setSearchText(e.target.value)} className="flex-1 border rounded px-3 py-2" />
-                <button onClick={saveCurrentSearch} className="px-3 py-2 rounded bg-blue-600 text-white">Save</button>
-                <HistoryDropdown history={searchHistory} onApply={applyHistoryEntry} onClear={clearSearchHistory} onRemove={removeHistoryItem} />
-              </div>
-            </div>
-            {/* Sort */}
-            <div className="flex gap-2 items-center">
-              <label className="text-sm text-gray-600">Sort</label>
-              <select value={sortBy} onChange={e=>setSortBy(e.target.value)} className="border rounded px-3 py-2">
-                <option value="date_desc">Date ↓</option>
-                <option value="date_asc">Date ↑</option>
-                <option value="timein_desc">Time In ↓</option>
-                <option value="timein_asc">Time In ↑</option>
-                <option value="driver_asc">Driver A→Z</option>
-                <option value="driver_desc">Driver Z→A</option>
-              </select>
-            </div>
-          </div>
-        </div>
+{/* Filters */}
+<div className="bg-white shadow rounded-lg p-5 mb-6 border-t-4 border-green-600">
+  <div className="grid md:grid-cols-4 gap-5">
+
+    {/* Date */}
+    <div className="flex flex-col">
+      <label className="text-sm font-medium text-gray-700 mb-1">Date</label>
+      <input
+        type="date"
+        value={filterDate}
+        onChange={(e) => setFilterDate(e.target.value)}
+        className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-green-300"
+      />
+    </div>
+
+    {/* Status */}
+    <div className="flex flex-col">
+      <label className="text-sm font-medium text-gray-700 mb-1">Status</label>
+      <div className="flex gap-2">
+        {["ALL", "IN", "OUT"].map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={`px-4 py-2 rounded-lg border text-sm transition 
+              ${filterStatus === s
+                ? "bg-green-600 text-white border-green-600 shadow"
+                : "bg-white text-gray-700 hover:bg-gray-100"}`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* Search */}
+    <div className="flex flex-col">
+      <label className="text-sm font-medium text-gray-700 mb-1">
+        Search (type / driver / plate)
+      </label>
+      <div className="flex gap-2 items-center">
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-300"
+        />
+        <button
+          onClick={saveCurrentSearch}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
+        >
+          Save
+        </button>
+
+        {/* History Dropdown */}
+        <HistoryDropdown
+          history={searchHistory}
+          onApply={applyHistoryEntry}
+          onClear={clearSearchHistory}
+          onRemove={removeHistoryItem}
+        />
+      </div>
+    </div>
+
+   <div className="flex flex-col w-28 ml-[100px]">
+  <label className="text-xs font-medium text-gray-700 mb-1">Sort</label>
+  <select
+    value={sortBy}
+    onChange={(e) => setSortBy(e.target.value)}
+    className="border rounded-lg px-2 py-1.5 w-full text-sm focus:ring-2 focus:ring-gray-300"
+  >
+    <option value="date_desc">Newest</option>
+    <option value="date_asc">Oldest</option>
+    <option value="timein_desc">In ↓</option>
+    <option value="timein_asc">In ↑</option>
+    <option value="driver_asc">A→Z</option>
+  </select>
+</div>
+
+
+  </div>
+</div>
+
+
 
         {/* ------------------ CARD LIST ------------------ */}
         <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${filteredAndSortedTrucks.length>=10?"max-h-[520px] overflow-auto pr-2":""}`}>
@@ -288,24 +334,30 @@ const handleAddType = (e) => {
 
               {/* TRUCK TYPE DROPDOWN FILTERED BY CLIENT */}
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Truck Type</label>
-                <select value={newTruck.type} onChange={e=>{
-                  const val=e.target.value;
-                  setNewTruck(t=>({
-                    ...t,
-                    type:val,
-                    plate:registeredTypes.find(rt=>rt.name===val)?.plate || "",
-                  }));
-                }} className="border rounded px-3 py-2 w-full">
-                  <option value="">-- Select Truck Type --</option>
-                  {registeredTypes
-                    .filter(rt=>rt.clientName===newTruck.clientName)
-                    .map(rt=>rt.name)
-                    .sort()
-                    .map(name=> <option key={name} value={name}>{name}</option>)
-                  }
-                </select>
-              </div>
+  <label className="block text-sm text-gray-600 mb-1">Truck Type</label>
+  <select
+    value={newTruck.type}
+    onChange={e=>{
+      const val = e.target.value;
+      const selected = registeredTypes.find(rt => rt.name === val && rt.clientName === newTruck.clientName);
+      setNewTruck(t => ({
+        ...t,
+        type: val,
+        plate: selected?.plate || "", // now correctly picks plate for the selected client
+      }));
+    }}
+    className="border rounded px-3 py-2 w-full"
+  >
+    <option value="">-- Select Truck Type --</option>
+    {registeredTypes
+      .filter(rt => rt.clientName === newTruck.clientName)
+      .map(rt => rt.name)
+      .sort()
+      .map(name => <option key={name} value={name}>{name}</option>)
+    }
+  </select>
+</div>
+
 
               {/* DRIVER */}
               <div>
@@ -489,29 +541,71 @@ const handleAddType = (e) => {
   );
 }
 
-// ------------------ HISTORY DROPDOWN ------------------
-function HistoryDropdown({ history=[], onApply, onClear, onRemove }) {
+function HistoryDropdown({ history = [], onApply, onClear, onRemove }) {
   const [open, setOpen] = useState(false);
+
   return (
     <div className="relative">
-      <button type="button" onClick={()=>setOpen(o=>!o)} className="px-3 py-2 border rounded text-gray-700 hover:bg-gray-100">History</button>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="px-4 py-2 border rounded-lg text-gray-700 bg-gray-50 hover:bg-gray-100 text-sm"
+      >
+        History
+      </button>
+
       {open && (
-        <div className="absolute right-0 mt-1 w-64 bg-white border rounded shadow-lg z-50">
-          <div className="flex justify-between items-center p-2 border-b">
+        <div className="absolute right-0 mt-2 w-64 bg-white border rounded-lg shadow-lg z-50 animate-fadeIn">
+          
+          {/* Header */}
+          <div className="flex justify-between items-center p-2 border-b bg-gray-50 rounded-t-lg">
             <span className="text-sm font-semibold">Search History</span>
-            <button onClick={()=>{onClear(); setOpen(false)}} className="text-xs text-red-600 hover:underline">Clear All</button>
+            <button
+              onClick={() => {
+                onClear();
+                setOpen(false);
+              }}
+              className="text-xs text-red-600 hover:underline"
+            >
+              Clear All
+            </button>
           </div>
+
+          {/* List */}
           <ul className="max-h-64 overflow-auto">
-            {history.map(h=>(
-              <li key={h.id} className="flex justify-between items-center px-2 py-1 hover:bg-gray-50">
-                <button onClick={()=>{onApply(h); setOpen(false)}} className="text-sm text-gray-800 text-left flex-1">{h.name}</button>
-                <button onClick={()=>onRemove(h.id)} className="text-xs text-red-600 ml-1">x</button>
+            {history.map((h) => (
+              <li
+                key={h.id}
+                className="flex justify-between items-center px-3 py-2 hover:bg-gray-100"
+              >
+                <button
+                  onClick={() => {
+                    onApply(h);
+                    setOpen(false);
+                  }}
+                  className="text-sm text-gray-800 flex-1 text-left"
+                >
+                  {h.name}
+                </button>
+                <button
+                  onClick={() => onRemove(h.id)}
+                  className="text-xs text-red-600 ml-2"
+                >
+                  ✕
+                </button>
               </li>
             ))}
-            {history.length===0 && <li className="px-2 py-1 text-sm text-gray-500">No history</li>}
+
+            {history.length === 0 && (
+              <li className="px-3 py-2 text-sm text-gray-500">
+                No history saved
+              </li>
+            )}
           </ul>
+
         </div>
       )}
     </div>
   );
 }
+
