@@ -1,611 +1,1100 @@
-// Trucks.jsx
-import React, { useEffect, useMemo, useState, Fragment } from "react";
+// src/Pages/Trucks.jsx
+import React, { useState, useEffect, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-
-const STORAGE_KEYS = {
-  TRUCKS: "trucks_v1",
-  SEARCH_HISTORY: "truck_search_history_v1",
-  TRUCK_TYPES: "truck_types_v1",
-};
-
-const headerImage = "logo4.png";
+import axios from "axios";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import {
+  TruckIcon,
+  ArchiveBoxIcon,
+  UserIcon,
+  ClipboardDocumentListIcon,
+  CalendarIcon,
+  ClockIcon,
+  PencilIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 
 export default function Trucks() {
-  const todayISO = new Date().toISOString().split("T")[0];
-
-  // ------------------ STATES ------------------
   const [trucks, setTrucks] = useState([]);
-  const [registeredTypes, setRegisteredTypes] = useState([]);
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isRegisterTypeOpen, setIsRegisterTypeOpen] = useState(false);
-  const [currentTruck, setCurrentTruck] = useState(null);
-  const [filterDate, setFilterDate] = useState(todayISO);
-  const [filterStatus, setFilterStatus] = useState("ALL");
-  const [searchText, setSearchText] = useState("");
-  const [sortBy, setSortBy] = useState("date_desc");
-  const [newTruck, setNewTruck] = useState({ type: "", driver: "", plate: "", clientName: "", bay: "", date: todayISO, purpose: "", timeIn: "", timeOut: "" });
-  const [searchHistory, setSearchHistory] = useState([]);
-  const [newTypeName, setNewTypeName] = useState("");
-  const [newTypeDefaults, setNewTypeDefaults] = useState({ plate: "", clientName: "" });
+  const [truckTypes, setTruckTypes] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editModal, setEditModal] = useState({ open: false, truck: null });
+  const [deleteModal, setDeleteModal] = useState({ open: false, truckId: null });
+  const [filterDate, setFilterDate] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // ------------------ LOCAL STORAGE LOAD ------------------
+  const [registerForm, setRegisterForm] = useState({
+    plateNumber: "",
+    truckType: "",
+    clientName: "",
+  });
+
+  const [addForm, setAddForm] = useState({
+    plateNumber: "",
+    truckType: "",
+    clientName: "",
+    bay: "",
+    driver: "",
+    purpose: "",
+    date: new Date(),
+    timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  });
+
+  const allBays = Array.from({ length: 10 }, (_, i) => [`${i + 1}a`, `${i + 1}b`]).flat();
+
+  // ---------- Fetch Data ----------
+  const fetchTrucks = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/trucks");
+      setTrucks(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchTruckTypes = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/truck-types");
+      setTruckTypes(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/clients");
+      setClients(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    try { const raw = localStorage.getItem(STORAGE_KEYS.TRUCKS); if (raw) setTrucks(JSON.parse(raw)); } catch {}
-    try { const raw = localStorage.getItem(STORAGE_KEYS.TRUCK_TYPES); if (raw) setRegisteredTypes(JSON.parse(raw)); } catch {}
-    try { const raw = localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY); if (raw) setSearchHistory(JSON.parse(raw)); } catch {}
+    fetchTrucks();
+    fetchTruckTypes();
+    fetchClients();
   }, []);
 
-  // ------------------ LOCAL STORAGE SAVE ------------------
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.TRUCKS, JSON.stringify(trucks)); } catch {} }, [trucks]);
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.TRUCK_TYPES, JSON.stringify(registeredTypes)); } catch {} }, [registeredTypes]);
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(searchHistory)); } catch {} }, [searchHistory]);
+  // ---------- Register ----------
+  const handleRegisterChange = (e) =>
+    setRegisterForm({ ...registerForm, [e.target.name]: e.target.value });
 
-  // ------------------ UTILS ------------------
-  const fmtNow = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const nextId = () => (trucks.length ? Math.max(...trucks.map(t => t.id || 0)) + 1 : 1);
-  const parseTimeToMinutes = (timeStr) => {
-    if (!timeStr) return null;
-    const m = timeStr.match(/(\d{1,2}):(\d{2})\s*([AP]M)?/i);
-    if (!m) return null;
-    let hh = parseInt(m[1], 10), mm = parseInt(m[2], 10), ampm = m[3]?.toUpperCase();
-    if (ampm) { if (ampm === "AM" && hh === 12) hh = 0; if (ampm === "PM" && hh !== 12) hh += 12; }
-    return hh * 60 + mm;
-  };
-  const computeDuration = (t) => { if (!t.timeIn || !t.timeOut) return null; let mins = parseTimeToMinutes(t.timeOut) - parseTimeToMinutes(t.timeIn); if (mins < 0) mins += 24*60; const h=Math.floor(mins/60), m=mins%60; return h>0?`${h}h ${m}m`:`${m}m`; };
-  const statusBadge = (truck) => truck.timeOut ? <span className="inline-block text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-700">OUT</span> : truck.timeIn ? <span className="inline-block text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700">IN</span> : <span className="inline-block text-xs font-medium px-2 py-1 rounded bg-gray-100 text-gray-700">—</span>;
-  const builtinTypes = ["EV", "6 Wheeler", "10 Wheeler", "Trailer", "Pickup"];
-
-  const isBayOccupied = (bay, date) => trucks.some(t => t.date===date && t.bay===bay && !t.timeOut);
-
-  // ------------------ TRUCK HANDLERS ------------------
-  const handleAddTruck = e => {
-    e?.preventDefault();
-    const id = nextId();
-    setTrucks(s => [{ id, ...newTruck }, ...s]);
-    setNewTruck({ type: "", driver: "", plate: "", clientName: "", bay: "", date: todayISO, purpose: "", timeIn: "", timeOut: "" });
-    setIsAddOpen(false);
-  };
-
-  const handleOpenEdit = truck => { setCurrentTruck({...truck}); setIsEditOpen(true); };
-  const handleSaveEdit = e => { e?.preventDefault(); if(!currentTruck) return; setTrucks(s => s.map(t => t.id===currentTruck.id ? {...currentTruck} : t)); setIsEditOpen(false); };
-  const handleDeleteTruck = id => { if(!window.confirm("Delete this truck?")) return; setTrucks(s=>s.filter(t=>t.id!==id)); setIsEditOpen(false); };
-  const handleSetTimeIn = truckId => { const time=fmtNow(); setTrucks(s=>s.map(t=>t.id===truckId?{...t,timeIn:time}:t)); if(currentTruck?.id===truckId) setCurrentTruck(c=>({...c,timeIn:time})); };
-  const handleSetTimeOut = truckId => { const time=fmtNow(); setTrucks(s=>s.map(t=>t.id===truckId?{...t,timeOut:time}:t)); if(currentTruck?.id===truckId) setCurrentTruck(c=>({...c,timeOut:time})); };
-
-  // ------------------ TYPE HANDLERS ------------------
-const handleAddType = (e) => {
-  e.preventDefault();
-
-  // Check if plate is already registered
-  if (registeredTypes.some(rt => rt.plate === newTypeDefaults.plate && newTypeDefaults.plate.trim() !== "")) {
-    return alert(`Plate ${newTypeDefaults.plate} is already registered!`);
-  }
-
-  // Add the new type
-  setRegisteredTypes(prev => [
-    ...prev,
-    {
-      name: newTypeName.trim(),
-      plate: newTypeDefaults.plate.trim(),
-      clientName: newTypeDefaults.clientName.trim(),
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/api/register-truck", registerForm);
+      fetchClients();
+      setIsRegisterModalOpen(false);
+      setRegisterForm({ plateNumber: "", truckType: "", clientName: "" });
+    } catch (err) {
+      console.error(err);
     }
-  ]);
+  };
 
-  // Reset form
-  setNewTypeName("");
-  setNewTypeDefaults({ plate: "", clientName: "" });
+  // ---------- Add Truck ----------
+  const handleAddChange = (e) => {
+    const { name, value } = e.target;
+    let updatedForm = { ...addForm, [name]: value };
+
+    if (name === "clientName") {
+      updatedForm.truckType = "";
+      updatedForm.plateNumber = "";
+    }
+
+    if (name === "truckType" || name === "clientName") {
+      const truck = clients.find(
+        (c) => c.clientName === updatedForm.clientName && c.truckType === updatedForm.truckType
+      );
+      updatedForm.plateNumber = truck ? truck.plateNumber : "";
+    }
+
+    setAddForm(updatedForm);
+  };
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/api/add-truck", addForm);
+      fetchTrucks();
+      setIsAddModalOpen(false);
+      setAddForm({
+        plateNumber: "",
+        truckType: "",
+        clientName: "",
+        bay: "",
+        driver: "",
+        purpose: "",
+        date: new Date(),
+        timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ---------- Time Out ----------
+  const handleTimeOut = async (truck) => {
+    try {
+      const timeout = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      await axios.put(`http://localhost:5000/api/trucks/${truck.id}/timeout`, { timeOut: timeout });
+      setTrucks((prev) =>
+        prev.map((t) => (t.id === truck.id ? { ...t, timeOut: timeout } : t))
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ---------- Edit ----------
+  const handleEditOpen = (truck) => setEditModal({ open: true, truck });
+  const handleEditClose = () => setEditModal({ open: false, truck: null });
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditModal((prev) => ({
+      ...prev,
+      truck: { ...prev.truck, [name]: value },
+    }));
+  };
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`http://localhost:5000/api/trucks/${editModal.truck.id}`, {
+        driver: editModal.truck.driver,
+        purpose: editModal.truck.purpose,
+        bay: editModal.truck.bay,
+      });
+      setTrucks((prev) =>
+        prev.map((t) => (t.id === editModal.truck.id ? editModal.truck : t))
+      );
+      handleEditClose();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ---------- Delete ----------
+  const handleDeleteOpen = (id) => setDeleteModal({ open: true, truckId: id });
+  const handleDeleteClose = () => setDeleteModal({ open: false, truckId: null });
+  const handleDeleteConfirm = async () => {
+    try {
+      await axios.delete(`http://localhost:5000/api/trucks/${deleteModal.truckId}`);
+      setTrucks((prev) => prev.filter((t) => t.id !== deleteModal.truckId));
+      handleDeleteClose();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const occupiedBays = trucks.filter((t) => !t.timeOut).map((t) => t.bay);
+
+  // ---------- Filter Trucks by Date and Search ----------
+  const filteredTrucks = trucks.filter((truck) => {
+    const matchesDate = filterDate
+      ? new Date(truck.date).toDateString() === new Date(filterDate).toDateString()
+      : true;
+
+    const matchesSearch =
+      truck.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      truck.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      truck.truckType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (truck.driver && truck.driver.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return matchesDate && matchesSearch;
+  });
+
+
+{/* ===================== REGISTERED TRUCKS TABLE MODAL ===================== */}
+const [isRegisteredModalOpen, setIsRegisteredModalOpen] = useState(false);
+const [selectedClient, setSelectedClient] = useState("");
+
+
+const [isCompleteListModalOpen, setIsCompleteListModalOpen] = useState(false);
+const [completeFilterDate, setCompleteFilterDate] = useState(null);
+
+const exportCompleteCSV = () => {
+  const rows = trucks
+    .filter((t) =>
+      completeFilterDate
+        ? new Date(t.date).toDateString() === new Date(completeFilterDate).toDateString()
+        : true
+    )
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const csvContent =
+    "data:text/csv;charset=utf-8," +
+    [
+      "Client,Truck Type,Plate Number,Bay,Driver,Purpose,Date,Time In,Time Out",
+      ...rows.map((t) =>
+        [
+          t.clientName,
+          t.truckType,
+          t.plateNumber,
+          t.bay,
+          t.driver,
+          t.purpose,
+          new Date(t.date).toLocaleDateString("en-US"),
+          t.timeIn,
+          t.timeOut || "",
+        ].join(",")
+      ),
+    ].join("\n");
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `complete_trucks_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
-  const handleDeleteType = name => { if(!window.confirm(`Delete registered type "${name}"?`)) return; setRegisteredTypes(s=>s.filter(t=>t.name!==name)); };
 
-  // ------------------ CSV EXPORT ------------------
-  const exportCSV = () => {
-    const headers = ["id","type","driver","plate","clientName","bay","date","timeIn","timeOut","purpose"];
-    const rows = trucks.map(t=>headers.map(h=>JSON.stringify(t[h]??"")).join(","));
-    const csv=[headers.join(","),...rows].join("\n");
-    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`truck-logs-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
-  };
 
-  // ------------------ FILTERED & SORTED ------------------
-  const filteredAndSortedTrucks = useMemo(()=>{
-    const q = searchText.trim().toLowerCase();
-    let res = trucks.filter(t=>{
-      if(filterDate && t.date!==filterDate) return false;
-      if(filterStatus==="IN" && !t.timeIn) return false;
-      if(filterStatus==="OUT" && !t.timeOut) return false;
-      if(!q) return true;
-      const hay=`${t.type||""} ${t.driver||""} ${t.plate||""} ${t.clientName||""}`.toLowerCase();
-      return hay.includes(q);
-    });
-    const cmp = (a,b)=>{
-      if(sortBy==="date_desc") return b.date.localeCompare(a.date);
-      if(sortBy==="date_asc") return a.date.localeCompare(b.date);
-      if(sortBy==="timein_desc") return (parseTimeToMinutes(b.timeIn)||-1)-(parseTimeToMinutes(a.timeIn)||-1);
-      if(sortBy==="timein_asc") return (parseTimeToMinutes(a.timeIn)||99999)-(parseTimeToMinutes(b.timeIn)||99999);
-      if(sortBy==="driver_asc") return (a.driver||"").localeCompare(b.driver||"");
-      if(sortBy==="driver_desc") return (b.driver||"").localeCompare(a.driver||"");
-      return 0;
-    };
-    return res.slice().sort(cmp);
-  },[trucks,filterDate,filterStatus,searchText,sortBy]);
-
-  // ------------------ SEARCH HISTORY ------------------
-  const saveCurrentSearch = ()=>{
-    const entry = { id:Date.now(), name:`${filterDate} • ${filterStatus} • ${searchText||"-"}`, filters:{filterDate,filterStatus,searchText}, createdAt:new Date().toISOString() };
-    setSearchHistory(s=>[entry,...s].slice(0,12));
-  };
-  const applyHistoryEntry = entry=>{ if(!entry?.filters) return; setFilterDate(entry.filters.filterDate||todayISO); setFilterStatus(entry.filters.filterStatus||"ALL"); setSearchText(entry.filters.searchText||""); };
-  const clearSearchHistory = ()=>{ if(!window.confirm("Clear search history?")) return; setSearchHistory([]); };
-  const removeHistoryItem = id => setSearchHistory(s=>s.filter(h=>h.id!==id));
-
-  // ------------------ JSX ------------------
   return (
-    <div className="min-h-screen bg-gray-50 p-6 text-black">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <img src={headerImage} alt="logo" className="w-14 h-14 rounded-md object-cover shadow-sm" />
-            <div>
-              <h1 className="text-3xl font-bold text-green-700">Truck List</h1>
-              <p className="text-sm text-gray-500">Manage trucks — clock in/out, edit and search</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={()=>setIsAddOpen(true)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Add Truck</button>
-            <button onClick={()=>setIsRegisterTypeOpen(true)} className="bg-white border px-3 py-2 rounded hover:bg-gray-50 text-gray-800" title="Register truck type">+ Register Type</button>
-            <button onClick={exportCSV} className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700" title="Export CSV">Export CSV</button>
-          </div>
-        </div>
-
-{/* Filters */}
-<div className="bg-white shadow rounded-lg p-5 mb-6 border-t-4 border-green-600">
-  <div className="grid md:grid-cols-4 gap-5">
-
-    {/* Date */}
-    <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">Date</label>
-      <input
-        type="date"
-        value={filterDate}
-        onChange={(e) => setFilterDate(e.target.value)}
-        className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-green-300"
-      />
-    </div>
-
-    {/* Status */}
-    <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">Status</label>
-      <div className="flex gap-2">
-        {["ALL", "IN", "OUT"].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
-            className={`px-4 py-2 rounded-lg border text-sm transition 
-              ${filterStatus === s
-                ? "bg-green-600 text-white border-green-600 shadow"
-                : "bg-white text-gray-700 hover:bg-gray-100"}`}
-          >
-            {s}
-          </button>
-        ))}
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Logo and Buttons */}
+      <div className="flex items-center mb-4">
+        <img src="/logo4.png" alt="Logo" className="h-12 w-12 mr-3 object-contain" />
+        <h1 className="text-2xl font-bold text-gray-800">Truck Management</h1>
       </div>
-    </div>
 
-    {/* Search */}
-    <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">
-        Search (type / driver / plate)
-      </label>
-      <div className="flex gap-2 items-center">
+      {/* Actions */}
+      <div className="flex flex-wrap gap-4 mb-4 items-center">
+        <button
+          onClick={() => setIsRegisterModalOpen(true)}
+          className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium transition"
+        >
+          Register Truck
+        </button>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-medium transition"
+        >
+          Add Truck
+        </button>
+        {/* Button to Open Registered Trucks Modal */}
+{/* Button to Open Registered Trucks Modal */}
+<button
+  onClick={() => setIsRegisteredModalOpen(true)}
+  className="bg-purple-500 hover:bg-purple-600 text-white px-5 py-2 rounded-lg font-medium transition"
+>
+  View Registered Trucks
+</button>
+
+ {/* ---------- NEW BUTTON: View Complete Trucks List ---------- */}
+  <button
+    onClick={() => setIsCompleteListModalOpen(true)}
+    className="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-lg font-medium transition"
+  >
+    View Complete Trucks List
+  </button>
+
+
+        {/* Date Filter */}
+        <div className="ml-auto flex items-center gap-2">
+          <DatePicker
+            selected={filterDate}
+            onChange={(date) => setFilterDate(date)}
+            dateFormat="MMM d, yyyy"
+            placeholderText="Filter by date"
+            className="border p-2 rounded"
+          />
+          {filterDate && (
+            <button
+              onClick={() => setFilterDate(null)}
+              className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-4">
         <input
           type="text"
-          placeholder="Search..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-300"
-        />
-        <button
-          onClick={saveCurrentSearch}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
-        >
-          Save
-        </button>
-
-        {/* History Dropdown */}
-        <HistoryDropdown
-          history={searchHistory}
-          onApply={applyHistoryEntry}
-          onClear={clearSearchHistory}
-          onRemove={removeHistoryItem}
+          placeholder="Search by client, plate, truck type, or driver..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full md:w-1/2 border p-2 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
       </div>
-    </div>
 
-   <div className="flex flex-col w-28 ml-[100px]">
-  <label className="text-xs font-medium text-gray-700 mb-1">Sort</label>
-  <select
-    value={sortBy}
-    onChange={(e) => setSortBy(e.target.value)}
-    className="border rounded-lg px-2 py-1.5 w-full text-sm focus:ring-2 focus:ring-gray-300"
-  >
-    <option value="date_desc">Newest</option>
-    <option value="date_asc">Oldest</option>
-    <option value="timein_desc">In ↓</option>
-    <option value="timein_asc">In ↑</option>
-    <option value="driver_asc">A→Z</option>
-  </select>
-</div>
+{/* ---------- Truck Cards with Minimalist Action Buttons ---------- */}
+<div
+  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+  style={{
+    maxHeight: filteredTrucks.length > 9 ? "75vh" : "auto",
+    overflowY: filteredTrucks.length > 9 ? "scroll" : "visible",
+  }}
+>
+  {filteredTrucks.map((truck) => {
+    const isActive = !truck.timeOut;
+    return (
+      <div
+        key={truck.id}
+        className="relative rounded-xl shadow-md transition transform hover:scale-105 hover:shadow-xl duration-300 overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, #d2dbd7ff 0%, #7aedb1ff 50%, #43c584ff 100%)",
+        }}
+      >
+        {/* Decorative Icon */}
+        <TruckIcon className="absolute right-2 bottom-2 w-20 h-20 text-green-200 opacity-20 pointer-events-none" />
 
-
-  </div>
-</div>
-
-
-
-        {/* ------------------ CARD LIST ------------------ */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${filteredAndSortedTrucks.length>=10?"max-h-[520px] overflow-auto pr-2":""}`}>
-          {filteredAndSortedTrucks.length===0?
-            <div className="bg-white border rounded-lg p-6 text-center text-gray-500">No trucks found for the selected filters.</div>:
-            filteredAndSortedTrucks.map(truck=>(
-              <div key={truck.id} className="bg-white border rounded-lg shadow-sm p-4 flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">{truck.type||"—"}</h3>
-                      <p className="text-sm text-gray-500">Driver: <span className="text-gray-700 font-medium">{truck.driver||"—"}</span></p>
-                      <p className="text-sm text-gray-500">Plate: <span className="text-gray-700 font-medium">{truck.plate||"—"}</span></p>
-                      <p className="text-sm text-gray-500">Client: <span className="text-gray-700 font-medium">{truck.clientName||"—"}</span></p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500 mb-1">Date</p>
-                      <p className="font-medium text-gray-800">{truck.date}</p>
-                      <div className="mt-2">{statusBadge(truck)}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-6 text-sm text-gray-600">
-                    <div><span className="block text-xs text-gray-400">Time In</span><span className="font-medium">{truck.timeIn||"—"}</span></div>
-                    <div><span className="block text-xs text-gray-400">Time Out</span><span className="font-medium">{truck.timeOut||"—"}</span></div>
-                    {truck.purpose && <div><span className="block text-xs text-gray-400">Purpose</span><span className="font-medium">{truck.purpose}</span></div>}
-                    {truck.bay && <div><span className="block text-xs text-gray-400">Bay</span><span className="font-medium">{truck.bay}</span></div>}
-                    {computeDuration(truck) && <div><span className="block text-xs text-gray-400">Duration</span><span className="font-medium">{computeDuration(truck)}</span></div>}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-3">
-                  <div className="flex flex-col gap-2">
-                    {!truck.timeIn? <button onClick={()=>handleSetTimeIn(truck.id)} className="px-3 py-1 rounded border bg-green-50 text-green-700 hover:bg-green-100">Set IN</button>:
-                      <button disabled className="px-3 py-1 rounded border bg-green-100 text-green-800 cursor-default">{truck.timeIn}</button>}
-                    {!truck.timeOut? <button onClick={()=>handleSetTimeOut(truck.id)} className="px-3 py-1 rounded border bg-red-50 text-red-700 hover:bg-red-100">Set OUT</button>:
-                      <button disabled className="px-3 py-1 rounded border bg-red-100 text-red-800 cursor-default">{truck.timeOut}</button>}
-                  </div>
-                  <button onClick={()=>handleOpenEdit(truck)} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Edit</button>
-                </div>
-              </div>
-            ))
-          }
+        {/* Minimalist Action Buttons */}
+        <div className="absolute top-2 right-2 flex gap-2">
+          {!truck.timeOut && (
+            <button
+              onClick={() => handleTimeOut(truck)}
+              className="p-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-full shadow-sm transition"
+            >
+              <ClockIcon className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => handleEditOpen(truck)}
+            className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition"
+          >
+            <PencilIcon className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleDeleteOpen(truck.id)}
+            className="p-1 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-sm transition"
+          >
+            <TrashIcon className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* ------------------ MODALS ------------------ */}
- {/* ADD TRUCK MODAL */}
-<Transition appear show={isAddOpen} as={Fragment}>
-  <Dialog as="div" className="relative z-50" onClose={()=>setIsAddOpen(false)}>
-    <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-150" leaveFrom="opacity-100" leaveTo="opacity-0">
-      <div className="fixed inset-0 bg-black bg-opacity-25" />
-    </Transition.Child>
+        {/* Card Content */}
+        <div className="p-4 flex flex-col justify-between h-full space-y-3">
+          <span
+            className={`inline-block px-3 py-1 mb-1 text-xs font-semibold rounded-full shadow-sm ${
+              isActive
+                ? "bg-green-500 text-white shadow-green-300"
+                : "bg-gray-400 text-white shadow-gray-300"
+            }`}
+          >
+            {isActive ? "Active" : "Completed"}
+          </span>
 
-    <div className="fixed inset-0 overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left shadow-xl transition-all">
-            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">Add Truck</Dialog.Title>
-            <form onSubmit={e=>{
-              e.preventDefault();
-              if(!newTruck.bay) return alert("Please select a bay");
-              if(newTruck.bay === "Waitlist") {
-                handleAddTruck(); // Add truck to waitlist
-                return alert("Truck added to the waitlist");
-              }
-              if(isBayOccupied(newTruck.bay,newTruck.date)) return alert(`Bay ${newTruck.bay} is already occupied on ${newTruck.date}`);
-              // Automatically set time in
-              const timeNow = new Date();
-              setNewTruck(t=>({ ...t, timeIn: timeNow.toLocaleTimeString() }));
-              handleAddTruck();
-            }} className="flex flex-col gap-3">
+          <h2 className="text-green-800 font-bold text-base md:text-lg truncate">{truck.clientName}</h2>
 
-              {/* CLIENT DROPDOWN */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Client</label>
-                <select value={newTruck.clientName} onChange={e=>{
-                  const client = e.target.value;
-                  setNewTruck(t=>({
-                    ...t,
-                    clientName: client,
-                    type: "", // reset truck type when client changes
-                  }));
-                }} className="border rounded px-3 py-2 w-full">
-                  <option value="">-- Select Client --</option>
-                  {Array.from(new Set(registeredTypes.map(rt=>rt.clientName).filter(c=>c))).sort().map(c=>
-                    <option key={c} value={c}>{c}</option>
-                  )}
-                </select>
-              </div>
-
-              {/* TRUCK TYPE DROPDOWN FILTERED BY CLIENT */}
-              <div>
-  <label className="block text-sm text-gray-600 mb-1">Truck Type</label>
-  <select
-    value={newTruck.type}
-    onChange={e=>{
-      const val = e.target.value;
-      const selected = registeredTypes.find(rt => rt.name === val && rt.clientName === newTruck.clientName);
-      setNewTruck(t => ({
-        ...t,
-        type: val,
-        plate: selected?.plate || "", // now correctly picks plate for the selected client
-      }));
-    }}
-    className="border rounded px-3 py-2 w-full"
-  >
-    <option value="">-- Select Truck Type --</option>
-    {registeredTypes
-      .filter(rt => rt.clientName === newTruck.clientName)
-      .map(rt => rt.name)
-      .sort()
-      .map(name => <option key={name} value={name}>{name}</option>)
-    }
-  </select>
-</div>
-
-
-              {/* DRIVER */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Driver</label>
-                <input type="text" required value={newTruck.driver} onChange={e=>setNewTruck(t=>({...t,driver:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-              </div>
-
-              {/* PLATE */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Plate</label>
-                <input type="text" value={newTruck.plate} onChange={e=>setNewTruck(t=>({...t,plate:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-              </div>
-
-              {/* BAY */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Bay</label>
-                <select value={newTruck.bay} onChange={e=>setNewTruck(t=>({...t,bay:e.target.value}))} className="border rounded px-3 py-2 w-full">
-                  <option value="">-- Select Bay --</option>
-                  {Array.from({length:10}, (_,i)=>['A','B'].map(letter=>`${i+1}${letter}`)).flat().map(bay=>(
-                    <option 
-                      key={bay} 
-                      value={bay} 
-                      disabled={isBayOccupied(bay,newTruck.date)} // disable if bay occupied
-                    >
-                      {bay} {isBayOccupied(bay,newTruck.date) ? '(Occupied)' : ''}
-                    </option>
-                  ))}
-                  {/* Waitlist option */}
-                  <option value="Waitlist">Waitlist</option>
-                </select>
-              </div>
-
-              {/* PURPOSE */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Purpose</label>
-                <input type="text" value={newTruck.purpose} onChange={e=>setNewTruck(t=>({...t,purpose:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-              </div>
-
-              {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={()=>setIsAddOpen(false)} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Add Truck</button>
-              </div>
-
-            </form>
-          </Dialog.Panel>
-        </Transition.Child>
-      </div>
-    </div>
-  </Dialog>
-</Transition>
-
-
-{/* EDIT TRUCK MODAL */}
-<Transition appear show={isEditOpen} as={Fragment}>
-  <Dialog as="div" className="relative z-50" onClose={()=>setIsEditOpen(false)}>
-    <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-150" leaveFrom="opacity-100" leaveTo="opacity-0">
-      <div className="fixed inset-0 bg-black bg-opacity-25" />
-    </Transition.Child>
-    <div className="fixed inset-0 overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left shadow-xl transition-all">
-            <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">Edit Truck</Dialog.Title>
-            {currentTruck && <form onSubmit={handleSaveEdit} className="flex flex-col gap-3">
-
-              {/* Truck Type */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Truck Type</label>
-                <input type="text" value={currentTruck.type} disabled className="border rounded px-3 py-2 w-full bg-gray-100"/>
-              </div>
-
-              {/* Driver */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Driver</label>
-                <input type="text" value={currentTruck.driver} onChange={e=>setCurrentTruck(t=>({...t,driver:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-              </div>
-
-              {/* Plate */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Plate</label>
-                <input type="text" value={currentTruck.plate} onChange={e=>setCurrentTruck(t=>({...t,plate:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-              </div>
-
-              {/* Client */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Client</label>
-                <input type="text" value={currentTruck.clientName} disabled className="border rounded px-3 py-2 w-full bg-gray-100"/>
-              </div>
-
-              {/* Bay */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Bay</label>
-                <select value={currentTruck.bay} onChange={e=>setCurrentTruck(t=>({...t,bay:e.target.value}))} className="border rounded px-3 py-2 w-full">
-                  {Array.from({length:10}, (_,i)=>['A','B'].map(letter=>`${i+1}${letter}`)).flat().map(bay=>(
-                    <option 
-                      key={bay} 
-                      value={bay} 
-                      disabled={isBayOccupied(bay,currentTruck.date) && bay !== currentTruck.bay} // disable if occupied and not current
-                    >
-                      {bay} {isBayOccupied(bay,currentTruck.date) && bay !== currentTruck.bay ? '(Occupied)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Purpose */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Purpose</label>
-                <input type="text" value={currentTruck.purpose} onChange={e=>setCurrentTruck(t=>({...t,purpose:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={()=>handleDeleteTruck(currentTruck.id)} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
-                <button type="button" onClick={()=>setIsEditOpen(false)} className="px-4 py-2 rounded bg-gray-300 text-gray-800 hover:bg-gray-400">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Save</button>
-              </div>
-
-            </form>}
-          </Dialog.Panel>
-        </Transition.Child>
-      </div>
-    </div>
-  </Dialog>
-</Transition>
-
-
-        {/* REGISTER TYPE MODAL */}
-        <Transition appear show={isRegisterTypeOpen} as={Fragment}>
-          <Dialog as="div" className="relative z-50" onClose={()=>setIsRegisterTypeOpen(false)}>
-            <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-150" leaveFrom="opacity-100" leaveTo="opacity-0">
-              <div className="fixed inset-0 bg-black bg-opacity-25" />
-            </Transition.Child>
-            <div className="fixed inset-0 overflow-y-auto">
-              <div className="flex min-h-full items-center justify-center p-4">
-                <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                  <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left shadow-xl transition-all">
-                    <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">Register Truck Type</Dialog.Title>
-                    <form onSubmit={handleAddType} className="flex flex-col gap-3">
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Type Name</label>
-                        <input type="text" value={newTypeName} onChange={e=>setNewTypeName(e.target.value)} className="border rounded px-3 py-2 w-full"/>
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Default Plate</label>
-                        <input type="text" value={newTypeDefaults.plate} onChange={e=>setNewTypeDefaults(d=>({...d,plate:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Default Client Name</label>
-                        <input type="text" value={newTypeDefaults.clientName} onChange={e=>setNewTypeDefaults(d=>({...d,clientName:e.target.value}))} className="border rounded px-3 py-2 w-full"/>
-                      </div>
-                      <div className="flex justify-end gap-2 mt-4">
-                        <button type="button" onClick={()=>setIsRegisterTypeOpen(false)} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Cancel</button>
-                        <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Add Type</button>
-                      </div>
-                    </form>
-
-                    {/* Existing types list */}
-                    <div className="mt-6">
-                      <h4 className="text-sm font-semibold mb-2">Registered Types</h4>
-                      <ul className="space-y-2 max-h-48 overflow-auto">
-                        {registeredTypes.map(rt=>(
-                          <li key={rt.name} className="flex justify-between items-center bg-gray-50 px-3 py-1 rounded">
-                            <span>{rt.name} {rt.clientName?"("+rt.clientName+")":""}</span>
-                            <button onClick={()=>handleDeleteType(rt.name)} className="px-2 py-1 text-sm text-red-600 hover:text-red-800">Delete</button>
-                          </li>
-                        ))}
-                        {registeredTypes.length===0 && <li className="text-gray-500 text-sm">No registered types</li>}
-                      </ul>
-                    </div>
-                  </Dialog.Panel>
-                </Transition.Child>
-              </div>
-            </div>
-          </Dialog>
-        </Transition>
-
-      </div>
-    </div>
-  );
-}
-
-function HistoryDropdown({ history = [], onApply, onClear, onRemove }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="px-4 py-2 border rounded-lg text-gray-700 bg-gray-50 hover:bg-gray-100 text-sm"
-      >
-        History
-      </button>
-
-      {open && (
-        <div className="absolute right-0 mt-2 w-64 bg-white border rounded-lg shadow-lg z-50 animate-fadeIn">
-          
-          {/* Header */}
-          <div className="flex justify-between items-center p-2 border-b bg-gray-50 rounded-t-lg">
-            <span className="text-sm font-semibold">Search History</span>
-            <button
-              onClick={() => {
-                onClear();
-                setOpen(false);
-              }}
-              className="text-xs text-red-600 hover:underline"
-            >
-              Clear All
-            </button>
+          <div className="grid grid-cols-2 gap-2 text-green-700 text-sm">
+            <p className="flex items-center gap-1">
+              <TruckIcon className="w-4 h-4 text-green-600" />
+              <span className="font-semibold">Plate:</span> {truck.plateNumber}
+            </p>
+            <p className="flex items-center gap-1">
+              <ArchiveBoxIcon className="w-4 h-4 text-green-600" />
+              <span className="font-semibold">Bay:</span> {truck.bay}
+            </p>
+            <p className="flex items-center gap-1">
+              <UserIcon className="w-4 h-4 text-green-600" />
+              <span className="font-semibold">Driver:</span> {truck.driver}
+            </p>
+            <p className="flex items-center gap-1">
+              <ClipboardDocumentListIcon className="w-4 h-4 text-green-600" />
+              <span className="font-semibold">Purpose:</span> {truck.purpose}
+            </p>
           </div>
 
-          {/* List */}
-          <ul className="max-h-64 overflow-auto">
-            {history.map((h) => (
-              <li
-                key={h.id}
-                className="flex justify-between items-center px-3 py-2 hover:bg-gray-100"
-              >
-                <button
-                  onClick={() => {
-                    onApply(h);
-                    setOpen(false);
-                  }}
-                  className="text-sm text-gray-800 flex-1 text-left"
-                >
-                  {h.name}
-                </button>
-                <button
-                  onClick={() => onRemove(h.id)}
-                  className="text-xs text-red-600 ml-2"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
+          <div className="border-t border-green-200/50"></div>
 
-            {history.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-500">
-                No history saved
-              </li>
+          <div className="grid grid-cols-2 gap-2 text-green-700 text-sm">
+            <p className="flex items-center gap-1">
+              <CalendarIcon className="w-4 h-4 text-green-600" />
+              <span className="font-semibold">Date:</span>{" "}
+              {new Date(truck.date).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+            <p className="flex items-center gap-1">
+              <ClockIcon className="w-4 h-4 text-green-600" />
+              <span className="font-semibold">Time In:</span> {truck.timeIn}
+            </p>
+            {truck.timeOut && (
+              <p className="flex items-center gap-1">
+                <ClockIcon className="w-4 h-4 text-green-600" />
+                <span className="font-semibold">Time Out:</span> {truck.timeOut}
+              </p>
             )}
-          </ul>
-
+          </div>
         </div>
-      )}
+      </div>
+    );
+  })}
+</div>
+
+
+      {/* Keep all your existing Modals here (Register, Add, Edit, Delete) */}
+       {/* ===================== DELETE MODAL ===================== */}
+<Transition appear show={deleteModal.open} as={Fragment}>
+  <Dialog as="div" className="relative z-50" onClose={handleDeleteClose}>
+    <Transition.Child
+      as={Fragment}
+      enter="ease-out duration-300"
+      enterFrom="opacity-0 translate-y-4"
+      enterTo="opacity-100 translate-y-0"
+      leave="ease-in duration-200"
+      leaveFrom="opacity-100 translate-y-0"
+      leaveTo="opacity-0 translate-y-4"
+    >
+      <div className="fixed inset-0 bg-black bg-opacity-30" />
+    </Transition.Child>
+
+    <div className="fixed inset-0 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
+        >
+          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+            {/* Modal Header */}
+            <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-red-400 to-red-600 text-white rounded-t-2xl">
+              <TrashIcon className="w-6 h-6" />
+              <Dialog.Title className="text-lg font-semibold">Delete Truck</Dialog.Title>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 text-gray-700">
+              <p className="mb-4">
+                Are you sure you want to delete the truck{" "}
+                <span className="font-bold text-red-500">
+                  {trucks.find((t) => t.id === deleteModal.truckId)?.plateNumber || ""}
+                </span>{" "}
+                for client{" "}
+                <span className="font-bold">
+                  {trucks.find((t) => t.id === deleteModal.truckId)?.clientName || ""}
+                </span>
+                ?
+              </p>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={handleDeleteClose}
+                  className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </Dialog.Panel>
+        </Transition.Child>
+      </div>
+    </div>
+  </Dialog>
+</Transition>
+
+{/* ===================== EDIT MODAL ===================== */}
+<Transition appear show={editModal.open} as={Fragment}>
+  <Dialog as="div" className="relative z-50" onClose={handleEditClose}>
+    <Transition.Child
+      as={Fragment}
+      enter="ease-out duration-300"
+      enterFrom="opacity-0 translate-y-4"
+      enterTo="opacity-100 translate-y-0"
+      leave="ease-in duration-200"
+      leaveFrom="opacity-100 translate-y-0"
+      leaveTo="opacity-0 translate-y-4"
+    >
+      <div className="fixed inset-0 bg-black bg-opacity-30" />
+    </Transition.Child>
+
+    <div className="fixed inset-0 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
+        >
+          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+            {/* Modal Header */}
+            <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-t-2xl">
+              <PencilIcon className="w-6 h-6" />
+              <Dialog.Title className="text-lg font-semibold">Edit Truck</Dialog.Title>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 text-gray-700">
+              {editModal.truck && (
+                <form onSubmit={handleEditSubmit} className="space-y-3">
+                  <input
+                    type="text"
+                    name="driver"
+                    placeholder="Driver Name"
+                    value={editModal.truck.driver}
+                    onChange={handleEditChange}
+                    className="border p-2 w-full rounded"
+                    required
+                  />
+                  <input
+                    type="text"
+                    name="purpose"
+                    placeholder="Purpose"
+                    value={editModal.truck.purpose}
+                    onChange={handleEditChange}
+                    className="border p-2 w-full rounded"
+                  />
+                  <select
+                    name="bay"
+                    value={editModal.truck.bay}
+                    onChange={handleEditChange}
+                    className="border p-2 w-full rounded"
+                  >
+                    <option value="">Select Bay</option>
+                    {allBays.map((b) => (
+                      <option
+                        key={b}
+                        value={b}
+                        disabled={occupiedBays.includes(b) && b !== editModal.truck.bay}
+                      >
+                        {b} {occupiedBays.includes(b) && b !== editModal.truck.bay ? "(Occupied)" : ""}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Modal Actions */}
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button
+                      type="button"
+                      onClick={handleEditClose}
+                      className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition">
+                      Save
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </Dialog.Panel>
+        </Transition.Child>
+      </div>
+    </div>
+  </Dialog>
+</Transition>
+
+{/* ===================== REGISTER MODAL ===================== */}
+<Transition appear show={isRegisterModalOpen} as={Fragment}>
+  <Dialog as="div" className="relative z-50" onClose={() => setIsRegisterModalOpen(false)}>
+    <Transition.Child
+      as={Fragment}
+      enter="ease-out duration-300"
+      enterFrom="opacity-0 translate-y-4"
+      enterTo="opacity-100 translate-y-0"
+      leave="ease-in duration-200"
+      leaveFrom="opacity-100 translate-y-0"
+      leaveTo="opacity-0 translate-y-4"
+    >
+      <div className="fixed inset-0 bg-black bg-opacity-30" />
+    </Transition.Child>
+
+    <div className="fixed inset-0 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
+        >
+          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+            {/* Modal Header */}
+            <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-t-2xl">
+              <TruckIcon className="w-6 h-6" />
+              <Dialog.Title className="text-lg font-semibold">Register Truck</Dialog.Title>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 text-gray-700">
+              <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                <input
+                  type="text"
+                  name="plateNumber"
+                  placeholder="Plate Number"
+                  value={registerForm.plateNumber}
+                  onChange={handleRegisterChange}
+                  className="border p-2 w-full rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  name="truckType"
+                  placeholder="Truck Type"
+                  value={registerForm.truckType}
+                  onChange={handleRegisterChange}
+                  className="border p-2 w-full rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  name="clientName"
+                  placeholder="Client Name"
+                  value={registerForm.clientName}
+                  onChange={handleRegisterChange}
+                  className="border p-2 w-full rounded"
+                  required
+                />
+
+                {/* Modal Actions */}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsRegisterModalOpen(false)}
+                    className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-2 rounded bg-green-500 text-white hover:bg-green-600 transition">
+                    Register
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Dialog.Panel>
+        </Transition.Child>
+      </div>
+    </div>
+  </Dialog>
+</Transition>
+
+{/* ===================== ADD MODAL ===================== */}
+<Transition appear show={isAddModalOpen} as={Fragment}>
+  <Dialog as="div" className="relative z-50" onClose={() => setIsAddModalOpen(false)}>
+    <Transition.Child
+      as={Fragment}
+      enter="ease-out duration-300"
+      enterFrom="opacity-0 translate-y-4"
+      enterTo="opacity-100 translate-y-0"
+      leave="ease-in duration-200"
+      leaveFrom="opacity-100 translate-y-0"
+      leaveTo="opacity-0 translate-y-4"
+    >
+      <div className="fixed inset-0 bg-black bg-opacity-30" />
+    </Transition.Child>
+
+    <div className="fixed inset-0 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
+        >
+          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+            {/* Modal Header */}
+            <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-blue-400 to-blue-600 text-white rounded-t-2xl">
+              <TruckIcon className="w-6 h-6" />
+              <Dialog.Title className="text-lg font-semibold">Add Truck</Dialog.Title>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 text-gray-700">
+              <form onSubmit={handleAddSubmit} className="space-y-3">
+                {/* --- Client Name Dropdown --- */}
+                <select
+                  name="clientName"
+                  value={addForm.clientName}
+                  onChange={handleAddChange}
+                  className="border p-2 w-full rounded"
+                  required
+                >
+                  <option value="">Select Client</option>
+                  {Array.from(new Set(clients.map((c) => c.clientName))).map((client, idx) => (
+                    <option key={idx} value={client}>
+                      {client}
+                    </option>
+                  ))}
+                </select>
+
+                {/* --- Truck Type Dropdown --- */}
+                <select
+                  name="truckType"
+                  value={addForm.truckType}
+                  onChange={handleAddChange}
+                  className="border p-2 w-full rounded"
+                  required
+                  disabled={!addForm.clientName}
+                >
+                  <option value="">Select Truck Type</option>
+                  {addForm.clientName &&
+                    clients
+                      .filter((c) => c.clientName === addForm.clientName)
+                      .map((c) => c.truckType)
+                      .filter((value, index, self) => self.indexOf(value) === index)
+                      .map((type, idx) => (
+                        <option key={idx} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                </select>
+
+                {/* --- Plate Number (Read Only) --- */}
+                <input
+                  type="text"
+                  name="plateNumber"
+                  value={addForm.plateNumber}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100"
+                  placeholder="Plate Number will auto-fill"
+                />
+
+                {/* --- Bay Dropdown --- */}
+                <select
+                  name="bay"
+                  value={addForm.bay}
+                  onChange={handleAddChange}
+                  className="border p-2 w-full rounded"
+                  required
+                >
+                  <option value="">Select Bay</option>
+                  {allBays.map((b) => (
+                    <option key={b} value={b} disabled={occupiedBays.includes(b)}>
+                      {b} {occupiedBays.includes(b) ? "(Occupied)" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                {/* --- Driver --- */}
+                <input
+                  type="text"
+                  name="driver"
+                  placeholder="Driver Name"
+                  value={addForm.driver}
+                  onChange={handleAddChange}
+                  className="border p-2 w-full rounded"
+                  required
+                />
+
+                {/* --- Purpose --- */}
+                <input
+                  type="text"
+                  name="purpose"
+                  placeholder="Purpose"
+                  value={addForm.purpose}
+                  onChange={handleAddChange}
+                  className="border p-2 w-full rounded"
+                />
+
+                {/* --- Modal Actions --- */}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
+                  >
+                    Add Truck
+                  </button>
+                </div>
+              </form>
+            </div>
+          </Dialog.Panel>
+        </Transition.Child>
+      </div>
+    </div>
+  </Dialog>
+</Transition>
+
+
+{/* ===================== VIEW TRUCK MODAL ===================== */}
+
+<Transition appear show={isRegisteredModalOpen} as={Fragment}>
+  <Dialog as="div" className="relative z-50" onClose={() => setIsRegisteredModalOpen(false)}>
+    <Transition.Child
+      as={Fragment}
+      enter="ease-out duration-300"
+      enterFrom="opacity-0 translate-y-4"
+      enterTo="opacity-100 translate-y-0"
+      leave="ease-in duration-200"
+      leaveFrom="opacity-100 translate-y-0"
+      leaveTo="opacity-0 translate-y-4"
+    >
+      <div className="fixed inset-0 bg-black bg-opacity-30" />
+    </Transition.Child>
+
+    <div className="fixed inset-0 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
+        >
+          <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+            {/* Modal Header */}
+            <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-purple-400 to-purple-600 text-white rounded-t-2xl">
+              <TruckIcon className="w-6 h-6" />
+              <Dialog.Title className="text-lg font-semibold">Registered Trucks</Dialog.Title>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 text-gray-700">
+              {/* Filter by Client */}
+              <div className="mb-4">
+                <select
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                  className="border p-2 rounded w-full md:w-1/2"
+                >
+                  <option value="">All Clients</option>
+                  {Array.from(new Set(trucks.map((t) => t.clientName))).map((client, idx) => (
+                    <option key={idx} value={client}>
+                      {client}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Trucks Table */}
+              <div className="overflow-x-auto">
+               <table className="min-w-full border border-gray-200">
+    <thead className="bg-gray-100">
+      <tr>
+        <th className="px-4 py-2 text-left text-sm font-semibold border-b">Client</th>
+        <th className="px-4 py-2 text-left text-sm font-semibold border-b">Truck Type</th>
+        <th className="px-4 py-2 text-left text-sm font-semibold border-b">Plate Number</th>
+      </tr>
+    </thead>
+    <tbody>
+      {Array.from(
+        new Set(
+          trucks
+            .filter((t) => (selectedClient ? t.clientName === selectedClient : true))
+            .map((t) => `${t.clientName}|${t.truckType}|${t.plateNumber}`)
+        )
+      )
+        .map((key) => {
+          const [clientName, truckType, plateNumber] = key.split("|");
+          return { clientName, truckType, plateNumber };
+        })
+        .sort((a, b) => {
+          // Sort by Client Name → Truck Type → Plate Number
+          if (a.clientName !== b.clientName) return a.clientName.localeCompare(b.clientName);
+          if (a.truckType !== b.truckType) return a.truckType.localeCompare(b.truckType);
+          return a.plateNumber.localeCompare(b.plateNumber);
+        })
+        .map((truck, idx) => (
+          <tr key={idx} className="hover:bg-gray-50">
+            <td className="px-4 py-2 border-b">{truck.clientName}</td>
+            <td className="px-4 py-2 border-b">{truck.truckType}</td>
+            <td className="px-4 py-2 border-b">{truck.plateNumber}</td>
+          </tr>
+        ))}
+    </tbody>
+  </table>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setIsRegisteredModalOpen(false)}
+                  className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </Dialog.Panel>
+        </Transition.Child>
+      </div>
+    </div>
+  </Dialog>
+</Transition>
+
+
+{/* ===================== COMPLETE TRUCKS LIST MODAL ===================== */}
+<Transition appear show={isCompleteListModalOpen} as={Fragment}>
+  <Dialog
+    as="div"
+    className="relative z-50"
+    onClose={() => setIsCompleteListModalOpen(false)}
+  >
+    <Transition.Child
+      as={Fragment}
+      enter="ease-out duration-300"
+      enterFrom="opacity-0 translate-y-4"
+      enterTo="opacity-100 translate-y-0"
+      leave="ease-in duration-200"
+      leaveFrom="opacity-100 translate-y-0"
+      leaveTo="opacity-0 translate-y-4"
+    >
+      <div className="fixed inset-0 bg-black bg-opacity-30" />
+    </Transition.Child>
+
+    <div className="fixed inset-0 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
+        >
+          <Dialog.Panel className="w-full max-w-6xl transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+            
+            {/* Modal Header */}
+            <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-indigo-500 to-indigo-700 text-white rounded-t-2xl">
+              <TruckIcon className="w-6 h-6" />
+              <Dialog.Title className="text-lg font-semibold">
+                Complete Trucks List
+              </Dialog.Title>
+            </div>
+
+            {/* Filters & Export */}
+            <div className="p-6 text-gray-700 space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center md:gap-4">
+                
+                {/* Client Filter */}
+                <select
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                  className="border p-2 rounded w-full md:w-1/3"
+                >
+                  <option value="">All Clients</option>
+                  {Array.from(new Set(trucks.map((t) => t.clientName))).map((client, idx) => (
+                    <option key={idx} value={client}>
+                      {client}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Date Filter */}
+                <div className="flex items-center gap-2 mt-2 md:mt-0">
+                  <DatePicker
+                    selected={completeFilterDate}
+                    onChange={(date) => setCompleteFilterDate(date)}
+                    dateFormat="MMM d, yyyy"
+                    placeholderText="Filter by date"
+                    className="border p-2 rounded w-full md:w-auto"
+                  />
+                  {completeFilterDate && (
+                    <button
+                      onClick={() => setCompleteFilterDate(null)}
+                      className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* CSV Export */}
+                <button
+                  onClick={exportCompleteCSV}
+                  className="ml-auto bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition mt-2 md:mt-0"
+                >
+                  Export CSV
+                </button>
+              </div>
+
+              {/* Trucks Table */}
+              <div className="overflow-x-auto max-h-[60vh] border border-gray-200 rounded-lg shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100 sticky top-0">
+                    <tr>
+                      {["Client", "Truck Type", "Plate Number", "Bay", "Driver", "Purpose", "Date", "Time In", "Time Out"].map((header) => (
+                        <th
+                          key={header}
+                          className="px-4 py-2 text-left text-sm font-semibold text-gray-700 border-b"
+                        >
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {trucks
+                      .filter((t) =>
+                        selectedClient ? t.clientName === selectedClient : true
+                      )
+                      .filter((t) =>
+                        completeFilterDate
+                          ? new Date(t.date).toDateString() ===
+                            new Date(completeFilterDate).toDateString()
+                          : true
+                      )
+                      .sort((a, b) => new Date(a.date) - new Date(b.date))
+                      .map((truck, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-4 py-2">{truck.clientName}</td>
+                          <td className="px-4 py-2">{truck.truckType}</td>
+                          <td className="px-4 py-2">{truck.plateNumber}</td>
+                          <td className="px-4 py-2">{truck.bay}</td>
+                          <td className="px-4 py-2">{truck.driver}</td>
+                          <td className="px-4 py-2">{truck.purpose}</td>
+                          <td className="px-4 py-2">
+                            {new Date(truck.date).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </td>
+                          <td className="px-4 py-2">{truck.timeIn}</td>
+                          <td className="px-4 py-2">{truck.timeOut || "-"}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end p-4 border-t border-gray-200">
+              <button
+                onClick={() => setIsCompleteListModalOpen(false)}
+                className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition"
+              >
+                Close
+              </button>
+            </div>
+
+          </Dialog.Panel>
+        </Transition.Child>
+      </div>
+    </div>
+  </Dialog>
+</Transition>
+
+
     </div>
   );
 }
-
