@@ -1,665 +1,794 @@
-// Pages/Visitors.jsx
-import React, { useEffect, useMemo, useState, Fragment } from "react";
+// src/Pages/Visitors.jsx
+import React, { useState, useEffect, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-
-const STORAGE_KEYS = {
-  VISITORS: "visitors_v1",
-  SEARCH_HISTORY: "visitor_search_history_v1",
-  REGISTERED_TYPES: "truck_types_v1", // reuse truck types if available
-  APPOINTMENTS: "appointments_v1", // appointments created from Appointment.jsx
-};
-
-const headerImage = "logo4.png";
+import axios from "axios";
+import {
+  UserIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  ClockIcon,
+  PencilIcon,
+  CalendarDaysIcon,
+  IdentificationIcon,
+  TagIcon,
+  TruckIcon,
+  ClipboardDocumentListIcon,
+  BellIcon,
+  CheckIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function Visitors() {
-  const todayISO = new Date().toISOString().split("T")[0];
-
-  // ------------------ STATES ------------------
   const [visitors, setVisitors] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [registeredTypes, setRegisteredTypes] = useState([]); // optional reuse
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [currentVisitor, setCurrentVisitor] = useState(null);
-  const [filterDate, setFilterDate] = useState(todayISO);
-  const [filterStatus, setFilterStatus] = useState("ALL");
-  const [searchText, setSearchText] = useState("");
-  const [sortBy, setSortBy] = useState("date_desc");
-  const [newVisitor, setNewVisitor] = useState({
-    name: "",
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editModal, setEditModal] = useState({ open: false, visitor: null });
+  const [deleteModal, setDeleteModal] = useState({ open: false, visitorId: null });
+  const [filterDate, setFilterDate] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAppointments, setShowAppointments] = useState(false);
+
+  // Appointment modal state
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  const [addForm, setAddForm] = useState({
+    visitorName: "",
     company: "",
     personToVisit: "",
     purpose: "",
     idType: "",
     idNumber: "",
     badgeNumber: "",
-    vehicleMode: "On Foot", // Truck / Company Vehicle / Private Car / Motorcycle / On Foot
-    vehicleDetails: "", // plate or vehicle description
-    truckType: "", // only used when vehicleMode === "Truck"
-    date: todayISO,
-    timeIn: "",
-    timeOut: ""
+    vehicleMode: "On Foot",
+    vehicleDetails: "",
+    date: new Date().toISOString().split("T")[0],
+    timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    timeOut: "",
+    appointmentRequest: false,
   });
-  const [searchHistory, setSearchHistory] = useState([]);
 
-  // ------------------ LOCAL STORAGE LOAD ------------------
+  // Fetch Visitors
+  const fetchVisitors = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/visitors");
+      setVisitors(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    try { const raw = localStorage.getItem(STORAGE_KEYS.VISITORS); if (raw) setVisitors(JSON.parse(raw)); } catch {}
-    try { const raw = localStorage.getItem(STORAGE_KEYS.REGISTERED_TYPES); if (raw) setRegisteredTypes(JSON.parse(raw)); } catch {}
-    try { const raw = localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY); if (raw) setSearchHistory(JSON.parse(raw)); } catch {}
-    try { const raw = localStorage.getItem(STORAGE_KEYS.APPOINTMENTS); if (raw) setAppointments(JSON.parse(raw)); } catch {}
+    fetchVisitors();
   }, []);
 
-  // ------------------ LOCAL STORAGE SAVE ------------------
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.VISITORS, JSON.stringify(visitors)); } catch {} }, [visitors]);
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(searchHistory)); } catch {} }, [searchHistory]);
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(appointments)); } catch {} }, [appointments]);
 
-  // ------------------ storage event (cross-tab) ------------------
-  useEffect(() => {
-    const onStorage = (e) => {
-      if (e.key === STORAGE_KEYS.VISITORS) {
-        try { setVisitors(JSON.parse(e.newValue || "[]")); } catch {}
-      } else if (e.key === STORAGE_KEYS.APPOINTMENTS) {
-        try { setAppointments(JSON.parse(e.newValue || "[]")); } catch {}
-      } else if (e.key === STORAGE_KEYS.REGISTERED_TYPES) {
-        try { setRegisteredTypes(JSON.parse(e.newValue || "[]")); } catch {}
-      } else if (e.key === STORAGE_KEYS.SEARCH_HISTORY) {
-        try { setSearchHistory(JSON.parse(e.newValue || "[]")); } catch {}
-      }
+  const [appointmentFilterDate, setAppointmentFilterDate] = useState(null);
+
+
+  // ----- Add Visitor Handlers -----
+  const handleAddChange = (e) => {
+    const { name, value } = e.target;
+    setAddForm({ ...addForm, [name]: value });
+  };
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post("http://localhost:5000/api/visitors/add", addForm);
+      setVisitors((prev) => [res.data, ...prev]);
+      setIsAddModalOpen(false);
+      setAddForm({
+        visitorName: "",
+        company: "",
+        personToVisit: "",
+        purpose: "",
+        idType: "",
+        idNumber: "",
+        badgeNumber: "",
+        vehicleMode: "On Foot",
+        vehicleDetails: "",
+        date: new Date().toISOString().split("T")[0],
+        timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timeOut: "",
+        appointmentRequest: false,
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ----- Edit Visitor Handlers -----
+  const handleEditOpen = (visitor) => setEditModal({ open: true, visitor });
+  const handleEditClose = () => setEditModal({ open: false, visitor: null });
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditModal((prev) => ({
+      ...prev,
+      visitor: { ...prev.visitor, [name]: value },
+    }));
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.put(
+        `http://localhost:5000/api/visitors/${editModal.visitor.id}`,
+        editModal.visitor
+      );
+      setVisitors((prev) =>
+        prev.map((v) => (v.id === editModal.visitor.id ? res.data : v))
+      );
+      handleEditClose();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ----- Time Out -----
+  const handleTimeOut = async (visitor) => {
+    const updatedVisitor = {
+      ...visitor,
+      timeOut: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
-  // ------------------ UTILS ------------------
-  const fmtNow = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const nextId = () => (visitors.length ? Math.max(...visitors.map(v => v.id || 0)) + 1 : 1);
-  const parseTimeToMinutes = (timeStr) => {
-    if (!timeStr) return null;
-    const m = timeStr.match(/(\d{1,2}):(\d{2})\s*([AP]M)?/i);
-    if (!m) return null;
-    let hh = parseInt(m[1], 10), mm = parseInt(m[2], 10), ampm = m[3]?.toUpperCase();
-    if (ampm) { if (ampm === "AM" && hh === 12) hh = 0; if (ampm === "PM" && hh !== 12) hh += 12; }
-    return hh * 60 + mm;
-  };
-  const computeDuration = (v) => { if (!v.timeIn || !v.timeOut) return null; let mins = parseTimeToMinutes(v.timeOut) - parseTimeToMinutes(v.timeIn); if (mins < 0) mins += 24*60; const h=Math.floor(mins/60), m=mins%60; return h>0?`${h}h ${m}m`:`${m}m`; };
-  const statusBadge = (v) => v.timeOut ? <span className="inline-block text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-700">OUT</span> : v.timeIn ? <span className="inline-block text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700">IN</span> : <span className="inline-block text-xs font-medium px-2 py-1 rounded bg-gray-100 text-gray-700">—</span>;
-
-  // ------------------ VISITOR HANDLERS ------------------
-  const handleAddVisitor = (e) => {
-    e?.preventDefault();
-    const id = nextId();
-    setVisitors(s => [{ id, ...newVisitor }, ...s]);
-    setNewVisitor({
-      name: "",
-      company: "",
-      personToVisit: "",
-      purpose: "",
-      idType: "",
-      idNumber: "",
-      badgeNumber: "",
-      vehicleMode: "On Foot",
-      vehicleDetails: "",
-      truckType: "",
-      date: todayISO,
-      timeIn: "",
-      timeOut: ""
-    });
-    setIsAddOpen(false);
+    try {
+      await axios.put(`http://localhost:5000/api/visitors/${visitor.id}`, updatedVisitor);
+      setVisitors((prev) => prev.map((v) => (v.id === visitor.id ? updatedVisitor : v)));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleOpenEdit = (v) => { setCurrentVisitor({...v}); setIsEditOpen(true); };
-  const handleSaveEdit = e => { e?.preventDefault(); if(!currentVisitor) return; setVisitors(s => s.map(x => x.id===currentVisitor.id ? {...currentVisitor} : x)); setIsEditOpen(false); };
-  const handleDeleteVisitor = id => { if(!window.confirm("Delete this visitor?")) return; setVisitors(s=>s.filter(t=>t.id!==id)); setIsEditOpen(false); };
+  // ----- Delete Visitor -----
+  const handleDeleteOpen = (id) => setDeleteModal({ open: true, visitorId: id });
+  const handleDeleteClose = () => setDeleteModal({ open: false, visitorId: null });
 
-  const handleSetTimeIn = visitorId => { const time=fmtNow(); setVisitors(s=>s.map(v=>v.id===visitorId?{...v,timeIn:time}:v)); if(currentVisitor?.id===visitorId) setCurrentVisitor(c=>({...c,timeIn:time})); };
-  const handleSetTimeOut = visitorId => { const time=fmtNow(); setVisitors(s=>s.map(v=>v.id===visitorId?{...v,timeOut:time}:v)); if(currentVisitor?.id===visitorId) setCurrentVisitor(c=>({...c,timeOut:time})); };
-
-  // ------------------ APPOINTMENT HANDLERS ------------------
-  // Convert appointment into visitor (prefill add modal)
-  const handleCreateVisitorFromAppointment = (appt) => {
-    // prefill newVisitor with appointment data
-    setNewVisitor({
-      name: appt.name || "",
-      company: appt.company || "",
-      personToVisit: appt.personToVisit || "",
-      purpose: appt.purpose || "Appointment",
-      idType: appt.idType || "",
-      idNumber: appt.idNumber || "",
-      badgeNumber: appt.badgeNumber || "",
-      vehicleMode: appt.vehicleMode || "On Foot",
-      vehicleDetails: appt.vehicleDetails || "",
-      truckType: appt.truckType || "",
-      date: appt.date || todayISO,
-      timeIn: appt.time || "" // time from appointment form (preferred time)
-    });
-    // Optionally remove appointment (consider it processed)
-    const remain = appointments.filter(a => a.id !== appt.id);
-    setAppointments(remain);
-    // open add modal so user can review and "Add Visitor" (this will add with nextId)
-    setIsAddOpen(true);
+  const handleDeleteConfirm = async () => {
+    try {
+      await axios.delete(`http://localhost:5000/api/visitors/${deleteModal.visitorId}`);
+      setVisitors((prev) => prev.filter((v) => v.id !== deleteModal.visitorId));
+      handleDeleteClose();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleDismissAppointment = (id) => {
-    if(!window.confirm("Dismiss this appointment?")) return;
-    setAppointments(s => s.filter(a => a.id !== id));
+  // ----- Appointment modal actions -----
+  const appointmentRequests = visitors.filter((v) => v.appointmentRequest);
+
+  const acceptAppointment = async (visitor) => {
+    try {
+      setProcessingId(visitor.id);
+
+      // Set current time as Time In
+      const currentTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const updated = { ...visitor, appointmentRequest: false, timeIn: currentTime };
+
+      const res = await axios.put(`http://localhost:5000/api/visitors/${visitor.id}`, updated);
+      setVisitors((prev) => prev.map((v) => (v.id === visitor.id ? res.data : v)));
+      setProcessingId(null);
+    } catch (err) {
+      console.error(err);
+      setProcessingId(null);
+    }
   };
 
-  // ------------------ CSV EXPORT ------------------
-  const exportCSV = () => {
-    const headers = ["id","name","company","personToVisit","purpose","idType","idNumber","badgeNumber","vehicleMode","vehicleDetails","truckType","date","timeIn","timeOut"];
-    const rows = visitors.map(t=>headers.map(h=>JSON.stringify(t[h]??"")).join(","));
-    const csv=[headers.join(","),...rows].join("\n");
-    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`visitor-logs-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
+  const rejectAppointment = async (visitorId) => {
+    try {
+      setProcessingId(visitorId);
+      await axios.delete(`http://localhost:5000/api/visitors/${visitorId}`);
+      setVisitors((prev) => prev.filter((v) => v.id !== visitorId));
+      setProcessingId(null);
+    } catch (err) {
+      console.error(err);
+      setProcessingId(null);
+    }
   };
 
-  // ------------------ FILTERED & SORTED ------------------
-  const filteredAndSortedVisitors = useMemo(()=>{
-    const q = searchText.trim().toLowerCase();
-    let res = visitors.filter(t=>{
-      if(filterDate && t.date!==filterDate) return false;
-      if(filterStatus==="IN" && !t.timeIn) return false;
-      if(filterStatus==="OUT" && !t.timeOut) return false;
-      if(!q) return true;
-      const hay=`${t.name||""} ${t.company||""} ${t.personToVisit||""} ${t.purpose||""}`.toLowerCase();
-      return hay.includes(q);
-    });
-    const cmp = (a,b)=>{
-      if(sortBy==="date_desc") return b.date.localeCompare(a.date);
-      if(sortBy==="date_asc") return a.date.localeCompare(b.date);
-      if(sortBy==="timein_desc") return (parseTimeToMinutes(b.timeIn)||-1)-(parseTimeToMinutes(a.timeIn)||-1);
-      if(sortBy==="timein_asc") return (parseTimeToMinutes(a.timeIn)||99999)-(parseTimeToMinutes(b.timeIn)||99999);
-      if(sortBy==="name_asc") return (a.name||"").localeCompare(b.name||"");
-      if(sortBy==="name_desc") return (b.name||"").localeCompare(a.name||"");
-      return 0;
-    };
-    return res.slice().sort(cmp);
-  },[visitors,filterDate,filterStatus,searchText,sortBy]);
+  // ----- Filter & Search -----
+  const filteredVisitors = visitors.filter((visitor) => {
+    if (showAppointments && !visitor.appointmentRequest) return false;
+    if (!showAppointments && visitor.appointmentRequest) return false;
 
-  // ------------------ SEARCH HISTORY ------------------
-  const saveCurrentSearch = ()=>{
-    const entry = { id:Date.now(), name:`${filterDate} • ${filterStatus} • ${searchText||"-"}`, filters:{filterDate,filterStatus,searchText}, createdAt:new Date().toISOString() };
-    setSearchHistory(s=>[entry,...s].slice(0,12));
-  };
-  const applyHistoryEntry = entry=>{ if(!entry?.filters) return; setFilterDate(entry.filters.filterDate||todayISO); setFilterStatus(entry.filters.filterStatus||"ALL"); setSearchText(entry.filters.searchText||""); };
-  const clearSearchHistory = ()=>{ if(!window.confirm("Clear search history?")) return; setSearchHistory([]); };
-  const removeHistoryItem = id => setSearchHistory(s=>s.filter(h=>h.id!==id));
+    const matchesDate = filterDate
+      ? new Date(visitor.date).toDateString() === new Date(filterDate).toDateString()
+      : true;
 
-  // ------------------ JSX ------------------
+    const matchesSearch =
+      (visitor.visitorName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (visitor.personToVisit || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (visitor.idNumber || "").toLowerCase().includes(searchTerm.toLowerCase());
+
+    return matchesDate && matchesSearch;
+  });
+
+  // ----- Pagination -----
+  const indexOfLastVisitor = currentPage * itemsPerPage;
+  const indexOfFirstVisitor = indexOfLastVisitor - itemsPerPage;
+  const currentVisitors = filteredVisitors.slice(indexOfFirstVisitor, indexOfLastVisitor);
+  const totalPages = Math.ceil(filteredVisitors.length / itemsPerPage);
+
+  const openAppointmentModal = () => setIsAppointmentModalOpen(true);
+  const closeAppointmentModal = () => setIsAppointmentModalOpen(false);
+  const appointmentsCount = appointmentRequests.length;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6 text-black">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <img src={headerImage} alt="logo" className="w-14 h-14 rounded-md object-cover shadow-sm" />
-            <div>
-              <h1 className="text-3xl font-bold text-green-700">Visitor List</h1>
-              <p className="text-sm text-gray-500">Manage visitors — clock in/out, process appointments and track</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={()=>setIsAddOpen(true)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Add Visitor</button>
-            <button onClick={exportCSV} className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700" title="Export CSV">Export CSV</button>
-          </div>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <UserIcon className="h-12 w-12 text-green-500" />
+          <h1 className="text-2xl font-bold text-gray-800">Visitor Management</h1>
         </div>
-
-        {/* Appointment Notifications */}
-        <div className="mb-6">
-          <div className="bg-white shadow rounded-lg p-4 border-l-4 border-yellow-400">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-lg font-semibold text-yellow-800">Appointments / Notifications</h3>
-                <p className="text-sm text-gray-600">Recent appointment requests. Convert to visitor or dismiss.</p>
-              </div>
-              <div className="text-sm text-gray-500">{appointments.length} pending</div>
-            </div>
-
-            {appointments.length===0 ? (
-              <div className="text-sm text-gray-500 p-3">No appointments. Visitors added manually will appear below.</div>
-            ) : (
-              <ul className="space-y-2">
-                {appointments.slice(0,12).map(appt=>(
-                  <li key={appt.id} className="bg-yellow-50 border rounded p-3 flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="text-sm font-semibold text-yellow-800">{appt.name || "—"}</div>
-                          <div className="text-xs text-gray-600">{appt.company ? `${appt.company} • ${appt.personToVisit||"—"}` : (appt.personToVisit||"")}</div>
-                        </div>
-                        <div className="text-right text-xs text-gray-600">
-                          <div>{appt.date || "—"}</div>
-                          <div>{appt.time || "—"}</div>
-                        </div>
-                      </div>
-                      <div className="mt-2 text-sm text-gray-700">{appt.purpose || "Appointment"}</div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <button onClick={()=>handleCreateVisitorFromAppointment(appt)} className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700">Create Visitor</button>
-                      <button onClick={()=>handleDismissAppointment(appt.id)} className="px-3 py-1 rounded bg-red-100 text-red-700 text-sm hover:bg-red-200">Dismiss</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-{/* Filters */}
-<div className="bg-white shadow rounded-lg p-5 mb-6 border-t-4 border-green-600">
-  <div className="grid md:grid-cols-4 gap-5">
-
-    {/* Date */}
-    <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">Date</label>
-      <input
-        type="date"
-        value={filterDate}
-        onChange={(e) => setFilterDate(e.target.value)}
-        className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-green-300"
-      />
-    </div>
-
-    {/* Status */}
-    <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">Status</label>
-      <div className="flex gap-2">
-        {["ALL", "IN", "OUT"].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
-            className={`px-4 py-2 rounded-lg border text-sm transition 
-              ${filterStatus === s
-                ? "bg-green-600 text-white border-green-600 shadow"
-                : "bg-white text-gray-700 hover:bg-gray-100"}`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* Search */}
-    <div className="flex flex-col">
-      <label className="text-sm font-medium text-gray-700 mb-1">
-        Search (type / driver / plate)
-      </label>
-      <div className="flex gap-2 items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-300"
-        />
+        {/* Appointment Button */}
         <button
-          onClick={saveCurrentSearch}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
+          onClick={openAppointmentModal}
+          className="relative flex items-center gap-2 px-4 py-2 rounded font-medium transition bg-gray-200 text-gray-800 hover:bg-gray-250"
         >
-          Save
+          <BellIcon className="w-5 h-5" />
+          Appointment Requests
+          {appointmentsCount > 0 && (
+            <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+              {appointmentsCount}
+            </span>
+          )}
         </button>
-
-        {/* History Dropdown */}
-        <HistoryDropdown
-          history={searchHistory}
-          onApply={applyHistoryEntry}
-          onClear={clearSearchHistory}
-          onRemove={removeHistoryItem}
-        />
       </div>
-    </div>
 
-   <div className="flex flex-col w-28 ml-[100px]">
-  <label className="text-xs font-medium text-gray-700 mb-1">Sort</label>
-  <select
-    value={sortBy}
-    onChange={(e) => setSortBy(e.target.value)}
-    className="border rounded-lg px-2 py-1.5 w-full text-sm focus:ring-2 focus:ring-gray-300"
-  >
-    <option value="date_desc">Newest</option>
-    <option value="date_asc">Oldest</option>
-    <option value="timein_desc">In ↓</option>
-    <option value="timein_asc">In ↑</option>
-    <option value="driver_asc">A→Z</option>
-  </select>
-</div>
-
-
-  </div>
-</div>
-        {/* ------------------ CARD LIST ------------------ */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${filteredAndSortedVisitors.length>=10?"max-h-[520px] overflow-auto pr-2":""}`}>
-          {filteredAndSortedVisitors.length===0?
-            <div className="bg-white border rounded-lg p-6 text-center text-gray-500">No visitors found for the selected filters.</div>:
-            filteredAndSortedVisitors.map(v=>(
-              <div key={v.id} className="bg-white border rounded-lg shadow-sm p-4 flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">{v.name||"—"}</h3>
-                      <p className="text-sm text-gray-500">Company / From: <span className="text-gray-700 font-medium">{v.company||"—"}</span></p>
-                      <p className="text-sm text-gray-500">Person to Visit: <span className="text-gray-700 font-medium">{v.personToVisit||"—"}</span></p>
-                      <p className="text-sm text-gray-500">Purpose: <span className="text-gray-700 font-medium">{v.purpose||"—"}</span></p>
-                      {v.idType && <p className="text-sm text-gray-500">ID: <span className="text-gray-700 font-medium">{v.idType} {v.idNumber?`• ${v.idNumber}`:""}</span></p>}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500 mb-1">Date</p>
-                      <p className="font-medium text-gray-800">{v.date}</p>
-                      <div className="mt-2">{statusBadge(v)}</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center gap-6 text-sm text-gray-600">
-                    <div><span className="block text-xs text-gray-400">Time In</span><span className="font-medium">{v.timeIn||"—"}</span></div>
-                    <div><span className="block text-xs text-gray-400">Time Out</span><span className="font-medium">{v.timeOut||"—"}</span></div>
-                    {v.vehicleMode && <div><span className="block text-xs text-gray-400">Vehicle</span><span className="font-medium">{v.vehicleMode}{v.vehicleDetails?` • ${v.vehicleDetails}`:""}</span></div>}
-                    {v.truckType && <div><span className="block text-xs text-gray-400">Truck Type</span><span className="font-medium">{v.truckType}</span></div>}
-                    {computeDuration(v) && <div><span className="block text-xs text-gray-400">Duration</span><span className="font-medium">{computeDuration(v)}</span></div>}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-3">
-                  <div className="flex flex-col gap-2">
-                    {!v.timeIn? <button onClick={()=>handleSetTimeIn(v.id)} className="px-3 py-1 rounded border bg-green-50 text-green-700 hover:bg-green-100">Set IN</button>:
-                      <button disabled className="px-3 py-1 rounded border bg-green-100 text-green-800 cursor-default">{v.timeIn}</button>}
-                    {!v.timeOut? <button onClick={()=>handleSetTimeOut(v.id)} className="px-3 py-1 rounded border bg-red-50 text-red-700 hover:bg-red-100">Set OUT</button>:
-                      <button disabled className="px-3 py-1 rounded border bg-red-100 text-red-800 cursor-default">{v.timeOut}</button>}
-                  </div>
-                  <button onClick={()=>handleOpenEdit(v)} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Edit</button>
-                </div>
-              </div>
-            ))
-          }
-        </div>
-
-        {/* ------------------ MODALS ------------------ */}
-{/* ADD VISITOR MODAL */}
-<Transition appear show={isAddOpen} as={Fragment}>
-  <Dialog as="div" className="relative z-50" onClose={()=>setIsAddOpen(false)}>
-    <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-150" leaveFrom="opacity-100" leaveTo="opacity-0">
-      <div className="fixed inset-0 bg-black bg-opacity-25" />
-    </Transition.Child>
-
-    <div className="fixed inset-0 overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left shadow-xl transition-all">
-            <Dialog.Title className="text-lg font-medium text-black mb-4">Add Visitor</Dialog.Title>
-
-            <form onSubmit={handleAddVisitor} className="flex flex-col gap-3">
-              <div>
-                <label className="block text-sm text-black mb-1">Full Name</label>
-                <input type="text" required value={newVisitor.name} onChange={e=>setNewVisitor(t=>({...t,name:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Company / From</label>
-                <input type="text" value={newVisitor.company} onChange={e=>setNewVisitor(t=>({...t,company:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Person to Visit</label>
-                <input type="text" value={newVisitor.personToVisit} onChange={e=>setNewVisitor(t=>({...t,personToVisit:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Purpose</label>
-                <input type="text" value={newVisitor.purpose} onChange={e=>setNewVisitor(t=>({...t,purpose:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-black mb-1">ID Type</label>
-                  <input type="text" value={newVisitor.idType} onChange={e=>setNewVisitor(t=>({...t,idType:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-                <div>
-                  <label className="block text-sm text-black mb-1">ID Number</label>
-                  <input type="text" value={newVisitor.idNumber} onChange={e=>setNewVisitor(t=>({...t,idNumber:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Badge Number</label>
-                <input type="text" value={newVisitor.badgeNumber} onChange={e=>setNewVisitor(t=>({...t,badgeNumber:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              {/* Vehicle Mode */}
-              <div>
-                <label className="block text-sm text-black mb-1">Vehicle Mode</label>
-                <select value={newVisitor.vehicleMode} onChange={e=>setNewVisitor(t=>({...t,vehicleMode:e.target.value, truckType: ""}))} className="border rounded px-3 py-2 w-full text-black">
-                  <option>On Foot</option>
-                  <option>Truck</option>
-                  <option>Company Vehicle</option>
-                  <option>Private Car</option>
-                  <option>Motorcycle</option>
-                </select>
-              </div>
-
-              {/* Truck type is only visible when vehicleMode === 'Truck' */}
-              {newVisitor.vehicleMode === "Truck" && (
-                <div>
-                  <label className="block text-sm text-black mb-1">Truck Type</label>
-                  <select value={newVisitor.truckType} onChange={e=>setNewVisitor(t=>({...t,truckType:e.target.value}))} className="border rounded px-3 py-2 w-full text-black">
-                    <option value="">-- Select Truck Type (optional) --</option>
-                    {registeredTypes.map(rt=> <option key={rt.name} value={rt.name}>{rt.name}{rt.clientName?` (${rt.clientName})`:''}</option>)}
-                    <option value="EV">EV</option>
-                    <option value="6 Wheeler">6 Wheeler</option>
-                    <option value="10 Wheeler">10 Wheeler</option>
-                    <option value="Trailer">Trailer</option>
-                    <option value="Pickup">Pickup</option>
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm text-black mb-1">Vehicle Details (plate / note)</label>
-                <input type="text" value={newVisitor.vehicleDetails} onChange={e=>setNewVisitor(t=>({...t,vehicleDetails:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-black mb-1">Date</label>
-                  <input type="date" value={newVisitor.date} onChange={e=>setNewVisitor(t=>({...t,date:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-                <div>
-                  <label className="block text-sm text-black mb-1">Time (optional)</label>
-                  <input type="time" value={newVisitor.timeIn} onChange={e=>setNewVisitor(t=>({...t,timeIn:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={()=>setIsAddOpen(false)} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Add Visitor</button>
-              </div>
-            </form>
-          </Dialog.Panel>
-        </Transition.Child>
-      </div>
-    </div>
-  </Dialog>
-</Transition>
-
-
-{/* EDIT VISITOR MODAL */}
-<Transition appear show={isEditOpen} as={Fragment}>
-  <Dialog as="div" className="relative z-50" onClose={()=>setIsEditOpen(false)}>
-    <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-150" leaveFrom="opacity-100" leaveTo="opacity-0">
-      <div className="fixed inset-0 bg-black bg-opacity-25" />
-    </Transition.Child>
-    <div className="fixed inset-0 overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <Transition.Child as={Fragment} enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-          <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left shadow-xl transition-all">
-            <Dialog.Title className="text-lg font-medium text-black mb-4">Edit Visitor</Dialog.Title>
-            {currentVisitor && <form onSubmit={handleSaveEdit} className="flex flex-col gap-3">
-
-              <div>
-                <label className="block text-sm text-black mb-1">Full Name</label>
-                <input type="text" value={currentVisitor.name} onChange={e=>setCurrentVisitor(t=>({...t,name:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Company / From</label>
-                <input type="text" value={currentVisitor.company} onChange={e=>setCurrentVisitor(t=>({...t,company:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Person to Visit</label>
-                <input type="text" value={currentVisitor.personToVisit} onChange={e=>setCurrentVisitor(t=>({...t,personToVisit:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Purpose</label>
-                <input type="text" value={currentVisitor.purpose} onChange={e=>setCurrentVisitor(t=>({...t,purpose:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-black mb-1">ID Type</label>
-                  <input type="text" value={currentVisitor.idType} onChange={e=>setCurrentVisitor(t=>({...t,idType:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-                <div>
-                  <label className="block text-sm text-black mb-1">ID Number</label>
-                  <input type="text" value={currentVisitor.idNumber} onChange={e=>setCurrentVisitor(t=>({...t,idNumber:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Badge Number</label>
-                <input type="text" value={currentVisitor.badgeNumber} onChange={e=>setCurrentVisitor(t=>({...t,badgeNumber:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div>
-                <label className="block text-sm text-black mb-1">Vehicle Mode</label>
-                <select value={currentVisitor.vehicleMode} onChange={e=>setCurrentVisitor(t=>({...t,vehicleMode:e.target.value}))} className="border rounded px-3 py-2 w-full text-black">
-                  <option>On Foot</option>
-                  <option>Truck</option>
-                  <option>Company Vehicle</option>
-                  <option>Private Car</option>
-                  <option>Motorcycle</option>
-                </select>
-              </div>
-
-              {currentVisitor.vehicleMode === "Truck" && (
-                <div>
-                  <label className="block text-sm text-black mb-1">Truck Type</label>
-                  <select value={currentVisitor.truckType} onChange={e=>setCurrentVisitor(t=>({...t,truckType:e.target.value}))} className="border rounded px-3 py-2 w-full text-black">
-                    <option value="">-- Select Truck Type (optional) --</option>
-                    {registeredTypes.map(rt=> <option key={rt.name} value={rt.name}>{rt.name}{rt.clientName?` (${rt.clientName})`:''}</option>)}
-                    <option value="EV">EV</option>
-                    <option value="6 Wheeler">6 Wheeler</option>
-                    <option value="10 Wheeler">10 Wheeler</option>
-                    <option value="Trailer">Trailer</option>
-                    <option value="Pickup">Pickup</option>
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm text-black mb-1">Vehicle Details (plate / note)</label>
-                <input type="text" value={currentVisitor.vehicleDetails} onChange={e=>setCurrentVisitor(t=>({...t,vehicleDetails:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-black mb-1">Date</label>
-                  <input type="date" value={currentVisitor.date} onChange={e=>setCurrentVisitor(t=>({...t,date:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-                <div>
-                  <label className="block text-sm text-black mb-1">Time In</label>
-                  <input type="time" value={currentVisitor.timeIn} onChange={e=>setCurrentVisitor(t=>({...t,timeIn:e.target.value}))} className="border rounded px-3 py-2 w-full text-black"/>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={()=>handleDeleteVisitor(currentVisitor.id)} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
-                <button type="button" onClick={()=>setIsEditOpen(false)} className="px-4 py-2 rounded bg-gray-300 text-gray-800 hover:bg-gray-400">Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Save</button>
-              </div>
-            </form>}
-          </Dialog.Panel>
-        </Transition.Child>
-      </div>
-    </div>
-  </Dialog>
-</Transition>
-
-
-      </div>
-    </div>
-  );
-}
-
-function HistoryDropdown({ history = [], onApply, onClear, onRemove }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="px-4 py-2 border rounded-lg text-gray-700 bg-gray-50 hover:bg-gray-100 text-sm"
-      >
-        History
-      </button>
-
-      {open && (
-        <div className="absolute right-0 mt-2 w-64 bg-white border rounded-lg shadow-lg z-50 animate-fadeIn">
-          
-          {/* Header */}
-          <div className="flex justify-between items-center p-2 border-b bg-gray-50 rounded-t-lg">
-            <span className="text-sm font-semibold">Search History</span>
-            <button
-              onClick={() => {
-                onClear();
-                setOpen(false);
-              }}
-              className="text-xs text-red-600 hover:underline"
-            >
-              Clear All
-            </button>
-          </div>
-
-          {/* List */}
-          <ul className="max-h-64 overflow-auto">
-            {history.map((h) => (
-              <li
-                key={h.id}
-                className="flex justify-between items-center px-3 py-2 hover:bg-gray-100"
-              >
-                <button
-                  onClick={() => {
-                    onApply(h);
-                    setOpen(false);
-                  }}
-                  className="text-sm text-gray-800 flex-1 text-left"
-                >
-                  {h.name}
-                </button>
-                <button
-                  onClick={() => onRemove(h.id)}
-                  className="text-xs text-red-600 ml-2"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-
-            {history.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-500">
-                No history saved
-              </li>
-            )}
-          </ul>
-
+      {/* Controls */}
+      {!showAppointments && (
+        <div className="flex flex-wrap gap-4 mb-4 items-center">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-medium transition"
+          >
+            Add Visitor
+          </button>
         </div>
       )}
+
+      {/* Search & Filter */}
+      <div className="mb-4 flex flex-col md:flex-row gap-4 items-center">
+        <input
+          type="text"
+          placeholder={`Search visitors...`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full md:w-1/2 border p-2 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+        />
+        <DatePicker
+          selected={filterDate}
+          onChange={(date) => setFilterDate(date)}
+          dateFormat="MMM d, yyyy"
+          placeholderText="Filter by date"
+          className="border p-2 rounded"
+        />
+        {filterDate && (
+          <button
+            onClick={() => setFilterDate(null)}
+            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Visitor / Appointment Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {currentVisitors.map((visitor) => {
+          const isActive = !visitor.timeOut;
+          return (
+            <div
+              key={visitor.id}
+              className="relative rounded-xl shadow-md transition transform hover:scale-105 hover:shadow-xl duration-300 overflow-hidden flex flex-col justify-between p-6 min-h-[240px] w-full"
+              style={{
+                background: visitor.appointmentRequest
+                  ? "linear-gradient(135deg, #fff4e3 0%, #ffdc9d 50%, #f2b84c 100%)"
+                  : "linear-gradient(135deg, #e3f2ed 0%, #9df2c5 50%, #4cc89b 100%)",
+              }}
+            >
+              {/* KEEP ALL DISPLAY CONTENT THE SAME */}
+              <UserIcon className="absolute right-3 bottom-3 w-20 h-20 text-green-200 opacity-20 pointer-events-none" />
+
+              {/* Action Buttons */}
+              <div className="absolute top-3 right-3 flex gap-2 z-30">
+                {!visitor.timeOut && !visitor.appointmentRequest && (
+                  <button
+                    onClick={() => handleTimeOut(visitor)}
+                    className="p-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded-full shadow transition"
+                    title="Time Out"
+                  >
+                    <ClockIcon className="w-4 h-4" />
+                  </button>
+                )}
+                {!visitor.appointmentRequest && (
+                  <>
+                    <button
+                      onClick={() => handleEditOpen(visitor)}
+                      className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow transition"
+                      title="Edit"
+                    >
+                      <PencilSquareIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteOpen(visitor.id)}
+                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow transition"
+                      title="Delete"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Status Badge */}
+              <span
+                className={`inline-block px-3 py-1 text-xs font-semibold rounded-full shadow-sm w-fit ${
+                  visitor.appointmentRequest
+                    ? "bg-yellow-500 text-white shadow-yellow-300 animate-pulse"
+                    : isActive
+                    ? "bg-green-500 text-white shadow-green-300 animate-pulse"
+                    : "bg-gray-400 text-white shadow-gray-300"
+                }`}
+              >
+                {visitor.appointmentRequest
+                  ? "Appointment Request"
+                  : isActive
+                  ? "Active"
+                  : "Completed"}
+              </span>
+
+              {/* Visitor Name */}
+              <h2 className="text-green-800 font-bold text-lg truncate mt-1">{visitor.visitorName}</h2>
+
+              {/* Visitor Info Grid */}
+              <div className="grid grid-cols-[120px_1fr] gap-x-2 gap-y-1 mt-2 text-green-800 text-sm">
+                <p className="flex items-center gap-1">
+                  <UserIcon className="w-4 h-4" />
+                  <span className="font-semibold">From:</span>
+                </p>
+                <p>{visitor.company}</p>
+
+                <p className="flex items-center gap-1">
+                  <UserIcon className="w-4 h-4" />
+                  <span className="font-semibold">Person:</span>
+                </p>
+                <p>{visitor.personToVisit}</p>
+
+                <p className="flex items-center gap-1">
+                  <ClipboardDocumentListIcon className="w-4 h-4" />
+                  <span className="font-semibold">Purpose:</span>
+                </p>
+                <p>{visitor.purpose}</p>
+
+                {!visitor.appointmentRequest && (
+                  <>
+                    <p className="flex items-center gap-1">
+                      <IdentificationIcon className="w-4 h-4" />
+                      <span className="font-semibold">ID:</span>
+                    </p>
+                    <p>{visitor.idType} - {visitor.idNumber}</p>
+
+                    <p className="flex items-center gap-1">
+                      <TagIcon className="w-4 h-4" />
+                      <span className="font-semibold">Badge:</span>
+                    </p>
+                    <p>{visitor.badgeNumber}</p>
+
+                    <p className="flex items-center gap-1">
+                      <TruckIcon className="w-4 h-4" />
+                      <span className="font-semibold">Vehicle:</span>
+                    </p>
+                    <p>{visitor.vehicleMode} {visitor.vehicleDetails && `(${visitor.vehicleDetails})`}</p>
+                  </>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-green-200/50 my-2"></div>
+
+              {/* Date & Time Grid */}
+              <div className="grid grid-cols-3 gap-2 text-green-800 text-sm">
+                <p className="flex items-center gap-1">
+                  <CalendarDaysIcon className="w-4 h-4" />
+                  <span className="font-semibold">Date:</span>{" "}
+                  {visitor.date
+                    ? new Date(visitor.date).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : "--"}
+                </p>
+                <p className="flex items-center gap-1">
+                  <ClockIcon className="w-4 h-4" />
+                  <span className="font-semibold">Time In:</span> {visitor.timeIn || "--"}
+                </p>
+                {!visitor.appointmentRequest && (
+                  <p className="flex items-center gap-1">
+                    <ClockIcon className="w-4 h-4" />
+                    <span className="font-semibold">Time Out:</span> {visitor.timeOut || "--"}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ---------- Pagination Controls ---------- */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-4">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
+          >
+            Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i + 1}
+              onClick={() => setCurrentPage(i + 1)}
+              className={`px-3 py-1 border rounded ${
+                currentPage === i + 1 ? "bg-green-500 text-white" : "hover:bg-gray-100"
+              }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+{/* ---------- Modern Appointment Requests Modal with Hover Animation ---------- */}
+<Transition appear show={isAppointmentModalOpen} as={Fragment}>
+  <Dialog as="div" className="relative z-50" onClose={closeAppointmentModal}>
+    <Transition.Child
+      as={Fragment}
+      enter="transition ease-out duration-300"
+      enterFrom="opacity-0 -translate-y-4 scale-95"
+      enterTo="opacity-100 translate-y-0 scale-100"
+      leave="transition ease-in duration-200"
+      leaveFrom="opacity-100 translate-y-0 scale-100"
+      leaveTo="opacity-0 -translate-y-4 scale-95"
+    >
+      <div className="fixed top-16 left-1/2 transform -translate-x-1/2 w-full max-w-3xl">
+        <div className="bg-white shadow-2xl rounded-3xl overflow-hidden border border-gray-200">
+          {/* Header */}
+          <div className="sticky top-0 z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white">
+            <div className="flex items-center gap-3">
+              <BellIcon className="w-6 h-6" />
+              <h3 className="text-xl font-semibold">Appointment Requests</h3>
+              <span className="text-sm opacity-80">({appointmentsCount})</span>
+            </div>
+
+            {/* Date Filter inside modal */}
+            <div className="flex items-center gap-2 mt-2 md:mt-0">
+<DatePicker
+  selected={appointmentFilterDate}
+  onChange={(date) => setAppointmentFilterDate(date)}
+  placeholderText="Filter by date"
+  dateFormat="MMM d, yyyy"
+  className="border p-2 rounded text-gray-800"
+  popperProps={{
+    strategy: 'fixed',
+    modifiers: [
+      {
+        name: 'preventOverflow',
+        options: {
+          altAxis: true,
+          padding: 8,
+        },
+      },
+    ],
+  }}
+/>
+
+              {appointmentFilterDate && (
+                <button
+                  onClick={() => setAppointmentFilterDate(null)}
+                  className="px-3 py-1 bg-yellow-600/30 rounded hover:bg-yellow-600/50 transition"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                onClick={closeAppointmentModal}
+                className="px-3 py-1 bg-yellow-600/30 rounded-lg hover:bg-yellow-600/50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5 max-h-[70vh] overflow-y-auto space-y-4">
+            {appointmentRequests.filter((v) =>
+              appointmentFilterDate
+                ? new Date(v.date).toDateString() === new Date(appointmentFilterDate).toDateString()
+                : true
+            ).length === 0 ? (
+              <p className="text-center text-gray-400 py-6">
+                No appointment requests for selected date.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {appointmentRequests
+                  .filter((v) =>
+                    appointmentFilterDate
+                      ? new Date(v.date).toDateString() === new Date(appointmentFilterDate).toDateString()
+                      : true
+                  )
+                  .map((visitor) => (
+                    <div
+                      key={visitor.id}
+                      className="bg-white border border-gray-200 shadow-lg rounded-2xl p-5 flex flex-col justify-between
+                                 transform transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-2xl"
+                    >
+                      {/* Visitor Info */}
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-bold text-gray-800 truncate">
+                          {visitor.visitorName}
+                        </h2>
+                        <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                          Appointment
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-gray-700 text-sm">
+                        <p>
+                          <span className="font-semibold text-gray-900">Company:</span>{" "}
+                          {visitor.company}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-900">Person:</span>{" "}
+                          {visitor.personToVisit}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-900">Purpose:</span>{" "}
+                          {visitor.purpose}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-900">Date:</span>{" "}
+                          {new Date(visitor.date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-gray-900">Time:</span>{" "}
+                          {visitor.timeIn}
+                        </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-end gap-3 mt-4">
+                        <button
+                          onClick={() => rejectAppointment(visitor.id)}
+                          disabled={processingId === visitor.id}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 font-semibold rounded-xl hover:bg-red-200 transition"
+                        >
+                          <XMarkIcon className="w-4 h-4" /> Reject
+                        </button>
+                        <button
+                          onClick={() => acceptAppointment(visitor)}
+                          disabled={processingId === visitor.id}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 font-semibold rounded-xl hover:bg-green-200 transition"
+                        >
+                          <CheckIcon className="w-4 h-4" /> Accept
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </Transition.Child>
+  </Dialog>
+</Transition>
+
+
+      
+      {/* Add Visitor Modal */}
+      <Transition appear show={isAddModalOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setIsAddModalOpen(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-30" />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+                <div className="flex items-center gap-2 p-4 bg-blue-500 text-white rounded-t-2xl">
+                  <UserIcon className="w-6 h-6" />
+                  <Dialog.Title className="text-lg font-semibold">Add Visitor</Dialog.Title>
+                </div>
+                <div className="p-6 text-gray-700">
+                  <form onSubmit={handleAddSubmit} className="space-y-3">
+                    {/* Basic Inputs */}
+                    <input type="text" name="visitorName" placeholder="Full Name" value={addForm.visitorName} onChange={handleAddChange} className="border p-2 w-full rounded" required />
+                    <input type="text" name="company" placeholder="Company / From" value={addForm.company} onChange={handleAddChange} className="border p-2 w-full rounded" />
+                    <input type="text" name="personToVisit" placeholder="Person to Visit" value={addForm.personToVisit} onChange={handleAddChange} className="border p-2 w-full rounded" />
+                    <input type="text" name="purpose" placeholder="Purpose" value={addForm.purpose} onChange={handleAddChange} className="border p-2 w-full rounded" />
+
+                    {/* ID Type & Number */}
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <select name="idType" value={addForm.idType} onChange={handleAddChange} className="border p-2 w-full rounded" required>
+                        <option value="">Select ID Type</option>
+                        <option value="PhilHealth ID">PhilHealth ID</option>
+                        <option value="SSS ID">SSS ID</option>
+                        <option value="Driver's License">Driver's License</option>
+                        <option value="TIN ID">TIN ID</option>
+                        <option value="Other">Other</option>
+                      </select>
+
+                      <input type="text" name="idNumber" placeholder="ID Number" value={addForm.idNumber} onChange={handleAddChange} className="border p-2 w-full rounded" required />
+                    </div>
+
+                    {/* Badge Number Dropdown */}
+                    <select name="badgeNumber" value={addForm.badgeNumber} onChange={handleAddChange} className="border p-2 w-full rounded" required>
+                      <option value="">Select Badge Number</option>
+                      {Array.from({ length: 15 }, (_, i) => (
+                        <option key={i} value={i + 1}>{i + 1}</option>
+                      ))}
+                    </select>
+
+                    {/* Vehicle Info */}
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <select
+                        name="vehicleMode"
+                        value={addForm.vehicleMode}
+                        onChange={handleAddChange}
+                        className="border p-2 w-full rounded"
+                      >
+                        <option>On Foot</option>
+                        <option>Truck</option>
+                        <option>Company Vehicle</option>
+                        <option>Private Car</option>
+                        <option>Motorcycle</option>
+                        <option>Other</option>
+                      </select>
+
+                      {/* Vehicle Details hidden only if On Foot */}
+                      {addForm.vehicleMode !== "On Foot" && (
+                        <input
+                          type="text"
+                          name="vehicleDetails"
+                          placeholder="Vehicle Details (plate / note)"
+                          value={addForm.vehicleDetails}
+                          onChange={handleAddChange}
+                          className="border p-2 w-full rounded"
+                        />
+                      )}
+                    </div>
+
+                    {/* Date only */}
+                    <input type="date" name="date" value={addForm.date} onChange={handleAddChange} className="border p-2 w-full rounded" />
+
+                    {/* Buttons */}
+                    <div className="flex justify-end gap-2 mt-4">
+                      <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
+                      >
+                        Add Visitor
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </Dialog.Panel>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Edit Visitor Modal */}
+      <Transition appear show={editModal.open} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={handleEditClose}>
+          <div className="fixed inset-0 bg-black bg-opacity-30" />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+                <div className="flex items-center gap-2 p-4 bg-yellow-500 text-white rounded-t-2xl">
+                  <PencilIcon className="w-6 h-6" />
+                  <Dialog.Title className="text-lg font-semibold">Edit Visitor</Dialog.Title>
+                </div>
+                <div className="p-6 text-gray-700">
+                  {editModal.visitor && (
+                    <form onSubmit={handleEditSubmit} className="space-y-3">
+                      {/* Basic Inputs */}
+                      <input type="text" name="visitorName" placeholder="Full Name" value={editModal.visitor.visitorName || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required />
+                      <input type="text" name="company" placeholder="Company / From" value={editModal.visitor.company || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
+                      <input type="text" name="personToVisit" placeholder="Person to Visit" value={editModal.visitor.personToVisit || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
+                      <input type="text" name="purpose" placeholder="Purpose" value={editModal.visitor.purpose || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
+
+                      {/* ID Type & Number */}
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <select name="idType" value={editModal.visitor.idType || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required>
+                          <option value="">Select ID Type</option>
+                          <option value="PhilHealth ID">PhilHealth ID</option>
+                          <option value="SSS ID">SSS ID</option>
+                          <option value="Driver's License">Driver's License</option>
+                          <option value="TIN ID">TIN ID</option>
+                          <option value="Other">Other</option>
+                        </select>
+                        <input type="text" name="idNumber" placeholder="ID Number" value={editModal.visitor.idNumber || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required />
+                      </div>
+
+                      {/* Badge Number Dropdown */}
+                      <select name="badgeNumber" value={editModal.visitor.badgeNumber || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required>
+                        <option value="">Select Badge Number</option>
+                        {Array.from({ length: 15 }, (_, i) => (
+                          <option key={i} value={i + 1}>{i + 1}</option>
+                        ))}
+                      </select>
+
+                      {/* Vehicle Info */}
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <select name="vehicleMode" value={editModal.visitor.vehicleMode || "On Foot"} onChange={handleEditChange} className="border p-2 w-full rounded">
+                          <option>On Foot</option>
+                          <option>Truck</option>
+                          <option>Company Vehicle</option>
+                          <option>Private Car</option>
+                          <option>Motorcycle</option>
+                          <option>Other</option>
+                        </select>
+
+                        {/* Vehicle Details hidden only if On Foot */}
+                        {editModal.visitor.vehicleMode !== "On Foot" && (
+                          <input type="text" name="vehicleDetails" placeholder="Vehicle Details (plate / note)" value={editModal.visitor.vehicleDetails || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
+                        )}
+                      </div>
+
+                      {/* Date only */}
+                      <input type="date" name="date" value={editModal.visitor.date ? new Date(editModal.visitor.date).toISOString().split("T")[0] : ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
+
+                      {/* Buttons */}
+                      <div className="flex justify-end gap-2 mt-4">
+                        <button type="button" onClick={handleEditClose} className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
+                        <button type="submit" className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition">Save</button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </Dialog.Panel>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Delete Visitor Modal */}
+      <Transition appear show={deleteModal.open} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={handleDeleteClose}>
+          <div className="fixed inset-0 bg-black bg-opacity-30" />
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Dialog.Panel className="w-full max-w-sm transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+                <div className="p-6 text-center">
+                  <Dialog.Title className="text-lg font-semibold text-gray-800">Delete Visitor?</Dialog.Title>
+                  <p className="mt-2 text-gray-600">Are you sure you want to delete this visitor?</p>
+                  <div className="mt-4 flex justify-center gap-4">
+                    <button onClick={handleDeleteClose} className="px-4 py-2 border rounded hover:bg-gray-100 transition">Cancel</button>
+                    <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Delete</button>
+                  </div>
+                </div>
+              </Dialog.Panel>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 }
-
-

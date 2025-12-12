@@ -8,7 +8,6 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import Dashboard from "./Pages/Dashboard";
 import Trucks from "./Pages/Trucks";
 import Visitors from "./Pages/Visitors";
-import Walkins from "./Pages/Walkins";
 import Appointment from "./Pages/Appointment";
 
 // Wrapper component to detect URL
@@ -57,7 +56,6 @@ function LayoutWrapper() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/trucks" element={<Trucks />} />
           <Route path="/visitors" element={<Visitors />} />
-          <Route path="/walkins" element={<Walkins />} />
           <Route path="/appointment" element={<Appointment />} />
         </Routes>
 

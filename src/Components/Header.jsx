@@ -75,7 +75,6 @@ function Header() {
                 { icon: "fa-tachometer-alt", label: "Dashboard", path: "/dashboard" },
                 { icon: "fa-truck", label: "Trucks", path: "/trucks" },
                 { icon: "fa-user", label: "Visitors", path: "/visitors" },
-                { icon: "fa-walking", label: "Walk-ins", path: "/walkins" },
               ].map((item, i) => (
                 <Link
                   key={i}
