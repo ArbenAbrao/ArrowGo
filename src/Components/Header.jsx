@@ -1,104 +1,164 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  FaBars,
+  FaChevronLeft,
+  FaChevronRight,
+  FaTruck,
+  FaUser,
+  FaTachometerAlt,
+  FaSignOutAlt,
+} from "react-icons/fa";
+import LogoutModal from "../Components/Modals/LogoutModal";
 
-function Header() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+function Header({ isCollapsed, setIsCollapsed, isDesktop }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const checkSize = () => setIsDesktop(window.innerWidth >= 768);
-    checkSize();
-    window.addEventListener("resize", checkSize);
-    return () => window.removeEventListener("resize", checkSize);
-  }, []);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const toggleCollapse = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    window.dispatchEvent(
-      new CustomEvent("sidebar-collapse", { detail: newState })
-    );
+    if (isDesktop) setIsCollapsed(!isCollapsed);
   };
+
+  const handleLogoutConfirm = () => {
+    localStorage.removeItem("isLoggedIn");
+    setIsLogoutModalOpen(false);
+    navigate("/", { replace: true });
+  };
+
+  const navItems = [
+    { icon: <FaTachometerAlt />, label: "Dashboard", path: "/dashboard" },
+    { icon: <FaTruck />, label: "Trucks", path: "/trucks" },
+    { icon: <FaUser />, label: "Visitors", path: "/visitors" },
+  ];
 
   return (
     <>
+      {/* Mobile Overlay */}
       <AnimatePresence>
-        {mobileOpen && (
+        {mobileOpen && !isDesktop && (
           <motion.div
+            className="fixed inset-0 bg-black/50 z-40"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
             onClick={() => setMobileOpen(false)}
           />
         )}
       </AnimatePresence>
 
+      {/* Sidebar */}
       <AnimatePresence>
         {(isDesktop || mobileOpen) && (
-          <motion.aside
-            initial={{ x: mobileOpen ? "-100%" : 0 }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ duration: 0.25 }}
-            className={`fixed top-0 left-0 h-full z-50 bg-green-600 border-r border-green-700/30 flex flex-col py-6 transition-all duration-300 ${
-              isCollapsed ? "w-[70px]" : "w-[240px]"
-            }`}
-          >
-            {isDesktop && (
-              <button
-                onClick={toggleCollapse}
-                className="absolute top-4 right-4 text-white hover:text-green-200 text-xl"
-              >
-                <i
-                  className={`fas ${
-                    isCollapsed ? "fa-chevron-right" : "fa-chevron-left"
-                  }`}
-                ></i>
-              </button>
-            )}
+  <motion.aside
+  layout
+  initial={{ x: isDesktop ? 0 : "-100%" }}
+  animate={{ x: 0 }}
+  exit={{ x: "-100%" }}
+  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+  className="fixed top-0 left-0 h-full z-50 bg-green-600 flex flex-col py-10 shadow-lg"
+  style={{ width: isCollapsed ? 70 : 240 }}
+>
+  {/* Logo */}
+  <div className="flex flex-col items-center mb-6">
+    <AnimatePresence mode="wait">
+      {isCollapsed ? (
+        <motion.img
+          key="logo-collapsed"
+          src="/logo7.png"
+          alt="Logo Collapsed"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.3 }}
+          className="w-10 h-10 mx-auto"
+        />
+      ) : (
+        <motion.img
+          key="logo-expanded"
+          src="/logo5-white.png"
+          alt="Logo Expanded"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.3 }}
+          className="w-32 h-auto mx-auto"
+        />
+      )}
+    </AnimatePresence>
 
-            <div className="px-4 mb-10 mt-4">
-              {!isCollapsed ? (
-                <h1 className="text-xl font-bold text-white whitespace-nowrap">
-                  ArrowGo Logistics Inc.
-                </h1>
-              ) : (
-                <h1 className="text-2xl font-bold text-white text-center">AG</h1>
-              )}
-            </div>
+    {/* Modern Toggle Button below logo */}
+    {isDesktop && (
+      <motion.button
+        onClick={toggleCollapse}
+        className="mt-4 flex items-center justify-center w-12 h-6 rounded-full bg-white/20 backdrop-blur-sm shadow-lg relative transition-colors hover:bg-white/30"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <motion.span
+          layout
+          className="absolute left-1 top-1 w-4 h-4 bg-green-600 rounded-full shadow-md"
+          animate={{ x: isCollapsed ? 24 : 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        />
+      </motion.button>
+    )}
+  </div>
 
-            <nav className="flex flex-col mt-4 space-y-6 text-gray-100">
-              {[
-                { icon: "fa-tachometer-alt", label: "Dashboard", path: "/dashboard" },
-                { icon: "fa-truck", label: "Trucks", path: "/trucks" },
-                { icon: "fa-user", label: "Visitors", path: "/visitors" },
-              ].map((item, i) => (
-                <Link
-                  key={i}
-                  to={item.path}
-                  className="flex items-center gap-4 px-5 hover:text-green-200 transition"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <i className={`fas ${item.icon} text-xl`}></i>
-                  {!isCollapsed && <span className="text-lg">{item.label}</span>}
-                </Link>
-              ))}
-            </nav>
-          </motion.aside>
+  {/* Navigation */}
+  <nav className="flex flex-col gap-1 text-white flex-1 mt-6">
+    {navItems.map((item, i) => {
+      const active = location.pathname === item.path;
+      return (
+        <Link
+          key={i}
+          to={item.path}
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center transition-all
+            ${isCollapsed ? "justify-center py-3" : "px-5 py-3 gap-4"}
+            ${active ? "bg-green-700" : "hover:bg-green-700/60"}`}
+        >
+          <span className="text-xl">{item.icon}</span>
+          {!isCollapsed && <span>{item.label}</span>}
+        </Link>
+      );
+    })}
+
+    <div className="flex-1" />
+
+    {/* Logout */}
+    <button
+      onClick={() => setIsLogoutModalOpen(true)}
+      className={`flex items-center hover:bg-green-700/60 transition-all
+        ${isCollapsed ? "justify-center py-3" : "px-5 py-3 gap-4"}`}
+    >
+      <FaSignOutAlt className="text-xl" />
+      {!isCollapsed && <span>Log Out</span>}
+    </button>
+  </nav>
+</motion.aside>
+
+
         )}
       </AnimatePresence>
 
+      {/* Mobile Menu Button */}
       {!isDesktop && (
         <button
           onClick={() => setMobileOpen(true)}
-          className="fixed top-5 left-5 text-gray-100 hover:text-green-200 text-3xl z-50"
+          className="fixed top-5 left-5 z-50 text-3xl text-white"
         >
-          <i className="fas fa-bars"></i>
+          <FaBars />
         </button>
       )}
+
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogoutConfirm}
+      />
     </>
   );
 }

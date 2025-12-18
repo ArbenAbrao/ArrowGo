@@ -2,6 +2,12 @@
 import React, { useState, useEffect, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import axios from "axios";
+import AddVisitorModal from "../Components/Visitors/AddVisitorModal";
+import EditVisitorModal from "../Components/Visitors/EditVisitorModal";
+import DeleteVisitorModal from "../Components/Visitors/DeleteVisitorModal";
+import AppointmentRequestsModal from "../Components/Visitors/AppointmentRequestsModal";
+
+
 import {
   UserIcon,
   PencilSquareIcon,
@@ -454,341 +460,23 @@ export default function Visitors() {
       )}
 
 {/* ---------- Modern Appointment Requests Modal with Hover Animation ---------- */}
-<Transition appear show={isAppointmentModalOpen} as={Fragment}>
-  <Dialog as="div" className="relative z-50" onClose={closeAppointmentModal}>
-    <Transition.Child
-      as={Fragment}
-      enter="transition ease-out duration-300"
-      enterFrom="opacity-0 -translate-y-4 scale-95"
-      enterTo="opacity-100 translate-y-0 scale-100"
-      leave="transition ease-in duration-200"
-      leaveFrom="opacity-100 translate-y-0 scale-100"
-      leaveTo="opacity-0 -translate-y-4 scale-95"
-    >
-      <div className="fixed top-16 left-1/2 transform -translate-x-1/2 w-full max-w-3xl">
-        <div className="bg-white shadow-2xl rounded-3xl overflow-hidden border border-gray-200">
-          {/* Header */}
-          <div className="sticky top-0 z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white">
-            <div className="flex items-center gap-3">
-              <BellIcon className="w-6 h-6" />
-              <h3 className="text-xl font-semibold">Appointment Requests</h3>
-              <span className="text-sm opacity-80">({appointmentsCount})</span>
-            </div>
-
-            {/* Date Filter inside modal */}
-            <div className="flex items-center gap-2 mt-2 md:mt-0">
-<DatePicker
-  selected={appointmentFilterDate}
-  onChange={(date) => setAppointmentFilterDate(date)}
-  placeholderText="Filter by date"
-  dateFormat="MMM d, yyyy"
-  className="border p-2 rounded text-gray-800"
-  popperProps={{
-    strategy: 'fixed',
-    modifiers: [
-      {
-        name: 'preventOverflow',
-        options: {
-          altAxis: true,
-          padding: 8,
-        },
-      },
-    ],
-  }}
+<AppointmentRequestsModal
+  isOpen={isAppointmentModalOpen}
+  onClose={closeAppointmentModal}
+  appointmentRequests={appointmentRequests}
+  acceptAppointment={acceptAppointment}
+  rejectAppointment={rejectAppointment}
+  processingId={processingId}
+  appointmentFilterDate={appointmentFilterDate}
+  setAppointmentFilterDate={setAppointmentFilterDate}
 />
 
-              {appointmentFilterDate && (
-                <button
-                  onClick={() => setAppointmentFilterDate(null)}
-                  className="px-3 py-1 bg-yellow-600/30 rounded hover:bg-yellow-600/50 transition"
-                >
-                  Clear
-                </button>
-              )}
-              <button
-                onClick={closeAppointmentModal}
-                className="px-3 py-1 bg-yellow-600/30 rounded-lg hover:bg-yellow-600/50 transition"
-              >
-                Close
-              </button>
-            </div>
-          </div>
+<AddVisitorModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} form={addForm} onChange={handleAddChange} onSubmit={handleAddSubmit} />
 
-          <div className="p-5 max-h-[70vh] overflow-y-auto space-y-4">
-            {appointmentRequests.filter((v) =>
-              appointmentFilterDate
-                ? new Date(v.date).toDateString() === new Date(appointmentFilterDate).toDateString()
-                : true
-            ).length === 0 ? (
-              <p className="text-center text-gray-400 py-6">
-                No appointment requests for selected date.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {appointmentRequests
-                  .filter((v) =>
-                    appointmentFilterDate
-                      ? new Date(v.date).toDateString() === new Date(appointmentFilterDate).toDateString()
-                      : true
-                  )
-                  .map((visitor) => (
-                    <div
-                      key={visitor.id}
-                      className="bg-white border border-gray-200 shadow-lg rounded-2xl p-5 flex flex-col justify-between
-                                 transform transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-2xl"
-                    >
-                      {/* Visitor Info */}
-                      <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-bold text-gray-800 truncate">
-                          {visitor.visitorName}
-                        </h2>
-                        <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
-                          Appointment
-                        </span>
-                      </div>
-                      <div className="space-y-1 text-gray-700 text-sm">
-                        <p>
-                          <span className="font-semibold text-gray-900">Company:</span>{" "}
-                          {visitor.company}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-gray-900">Person:</span>{" "}
-                          {visitor.personToVisit}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-gray-900">Purpose:</span>{" "}
-                          {visitor.purpose}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-gray-900">Date:</span>{" "}
-                          {new Date(visitor.date).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-gray-900">Time:</span>{" "}
-                          {visitor.timeIn}
-                        </p>
-                      </div>
+<EditVisitorModal isOpen={editModal.open} onClose={handleEditClose} visitor={editModal.visitor} onChange={handleEditChange} onSubmit={handleEditSubmit} />
 
-                      {/* Action Buttons */}
-                      <div className="flex justify-end gap-3 mt-4">
-                        <button
-                          onClick={() => rejectAppointment(visitor.id)}
-                          disabled={processingId === visitor.id}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 font-semibold rounded-xl hover:bg-red-200 transition"
-                        >
-                          <XMarkIcon className="w-4 h-4" /> Reject
-                        </button>
-                        <button
-                          onClick={() => acceptAppointment(visitor)}
-                          disabled={processingId === visitor.id}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 font-semibold rounded-xl hover:bg-green-200 transition"
-                        >
-                          <CheckIcon className="w-4 h-4" /> Accept
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </Transition.Child>
-  </Dialog>
-</Transition>
+<DeleteVisitorModal isOpen={deleteModal.open} onClose={handleDeleteClose} onConfirm={handleDeleteConfirm} />
 
-
-      
-      {/* Add Visitor Modal */}
-      <Transition appear show={isAddModalOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => setIsAddModalOpen(false)}>
-          <div className="fixed inset-0 bg-black bg-opacity-30" />
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
-                <div className="flex items-center gap-2 p-4 bg-blue-500 text-white rounded-t-2xl">
-                  <UserIcon className="w-6 h-6" />
-                  <Dialog.Title className="text-lg font-semibold">Add Visitor</Dialog.Title>
-                </div>
-                <div className="p-6 text-gray-700">
-                  <form onSubmit={handleAddSubmit} className="space-y-3">
-                    {/* Basic Inputs */}
-                    <input type="text" name="visitorName" placeholder="Full Name" value={addForm.visitorName} onChange={handleAddChange} className="border p-2 w-full rounded" required />
-                    <input type="text" name="company" placeholder="Company / From" value={addForm.company} onChange={handleAddChange} className="border p-2 w-full rounded" />
-                    <input type="text" name="personToVisit" placeholder="Person to Visit" value={addForm.personToVisit} onChange={handleAddChange} className="border p-2 w-full rounded" />
-                    <input type="text" name="purpose" placeholder="Purpose" value={addForm.purpose} onChange={handleAddChange} className="border p-2 w-full rounded" />
-
-                    {/* ID Type & Number */}
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <select name="idType" value={addForm.idType} onChange={handleAddChange} className="border p-2 w-full rounded" required>
-                        <option value="">Select ID Type</option>
-                        <option value="PhilHealth ID">PhilHealth ID</option>
-                        <option value="SSS ID">SSS ID</option>
-                        <option value="Driver's License">Driver's License</option>
-                        <option value="TIN ID">TIN ID</option>
-                        <option value="Other">Other</option>
-                      </select>
-
-                      <input type="text" name="idNumber" placeholder="ID Number" value={addForm.idNumber} onChange={handleAddChange} className="border p-2 w-full rounded" required />
-                    </div>
-
-                    {/* Badge Number Dropdown */}
-                    <select name="badgeNumber" value={addForm.badgeNumber} onChange={handleAddChange} className="border p-2 w-full rounded" required>
-                      <option value="">Select Badge Number</option>
-                      {Array.from({ length: 15 }, (_, i) => (
-                        <option key={i} value={i + 1}>{i + 1}</option>
-                      ))}
-                    </select>
-
-                    {/* Vehicle Info */}
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <select
-                        name="vehicleMode"
-                        value={addForm.vehicleMode}
-                        onChange={handleAddChange}
-                        className="border p-2 w-full rounded"
-                      >
-                        <option>On Foot</option>
-                        <option>Truck</option>
-                        <option>Company Vehicle</option>
-                        <option>Private Car</option>
-                        <option>Motorcycle</option>
-                        <option>Other</option>
-                      </select>
-
-                      {/* Vehicle Details hidden only if On Foot */}
-                      {addForm.vehicleMode !== "On Foot" && (
-                        <input
-                          type="text"
-                          name="vehicleDetails"
-                          placeholder="Vehicle Details (plate / note)"
-                          value={addForm.vehicleDetails}
-                          onChange={handleAddChange}
-                          className="border p-2 w-full rounded"
-                        />
-                      )}
-                    </div>
-
-                    {/* Date only */}
-                    <input type="date" name="date" value={addForm.date} onChange={handleAddChange} className="border p-2 w-full rounded" />
-
-                    {/* Buttons */}
-                    <div className="flex justify-end gap-2 mt-4">
-                      <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
-                      >
-                        Add Visitor
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </Dialog.Panel>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
-
-      {/* Edit Visitor Modal */}
-      <Transition appear show={editModal.open} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={handleEditClose}>
-          <div className="fixed inset-0 bg-black bg-opacity-30" />
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
-                <div className="flex items-center gap-2 p-4 bg-yellow-500 text-white rounded-t-2xl">
-                  <PencilIcon className="w-6 h-6" />
-                  <Dialog.Title className="text-lg font-semibold">Edit Visitor</Dialog.Title>
-                </div>
-                <div className="p-6 text-gray-700">
-                  {editModal.visitor && (
-                    <form onSubmit={handleEditSubmit} className="space-y-3">
-                      {/* Basic Inputs */}
-                      <input type="text" name="visitorName" placeholder="Full Name" value={editModal.visitor.visitorName || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required />
-                      <input type="text" name="company" placeholder="Company / From" value={editModal.visitor.company || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                      <input type="text" name="personToVisit" placeholder="Person to Visit" value={editModal.visitor.personToVisit || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                      <input type="text" name="purpose" placeholder="Purpose" value={editModal.visitor.purpose || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-
-                      {/* ID Type & Number */}
-                      <div className="grid md:grid-cols-2 gap-3">
-                        <select name="idType" value={editModal.visitor.idType || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required>
-                          <option value="">Select ID Type</option>
-                          <option value="PhilHealth ID">PhilHealth ID</option>
-                          <option value="SSS ID">SSS ID</option>
-                          <option value="Driver's License">Driver's License</option>
-                          <option value="TIN ID">TIN ID</option>
-                          <option value="Other">Other</option>
-                        </select>
-                        <input type="text" name="idNumber" placeholder="ID Number" value={editModal.visitor.idNumber || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required />
-                      </div>
-
-                      {/* Badge Number Dropdown */}
-                      <select name="badgeNumber" value={editModal.visitor.badgeNumber || ""} onChange={handleEditChange} className="border p-2 w-full rounded" required>
-                        <option value="">Select Badge Number</option>
-                        {Array.from({ length: 15 }, (_, i) => (
-                          <option key={i} value={i + 1}>{i + 1}</option>
-                        ))}
-                      </select>
-
-                      {/* Vehicle Info */}
-                      <div className="grid md:grid-cols-2 gap-3">
-                        <select name="vehicleMode" value={editModal.visitor.vehicleMode || "On Foot"} onChange={handleEditChange} className="border p-2 w-full rounded">
-                          <option>On Foot</option>
-                          <option>Truck</option>
-                          <option>Company Vehicle</option>
-                          <option>Private Car</option>
-                          <option>Motorcycle</option>
-                          <option>Other</option>
-                        </select>
-
-                        {/* Vehicle Details hidden only if On Foot */}
-                        {editModal.visitor.vehicleMode !== "On Foot" && (
-                          <input type="text" name="vehicleDetails" placeholder="Vehicle Details (plate / note)" value={editModal.visitor.vehicleDetails || ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-                        )}
-                      </div>
-
-                      {/* Date only */}
-                      <input type="date" name="date" value={editModal.visitor.date ? new Date(editModal.visitor.date).toISOString().split("T")[0] : ""} onChange={handleEditChange} className="border p-2 w-full rounded" />
-
-                      {/* Buttons */}
-                      <div className="flex justify-end gap-2 mt-4">
-                        <button type="button" onClick={handleEditClose} className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
-                        <button type="submit" className="px-4 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600 transition">Save</button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              </Dialog.Panel>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
-
-      {/* Delete Visitor Modal */}
-      <Transition appear show={deleteModal.open} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={handleDeleteClose}>
-          <div className="fixed inset-0 bg-black bg-opacity-30" />
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Dialog.Panel className="w-full max-w-sm transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
-                <div className="p-6 text-center">
-                  <Dialog.Title className="text-lg font-semibold text-gray-800">Delete Visitor?</Dialog.Title>
-                  <p className="mt-2 text-gray-600">Are you sure you want to delete this visitor?</p>
-                  <div className="mt-4 flex justify-center gap-4">
-                    <button onClick={handleDeleteClose} className="px-4 py-2 border rounded hover:bg-gray-100 transition">Cancel</button>
-                    <button onClick={handleDeleteConfirm} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Delete</button>
-                  </div>
-                </div>
-              </Dialog.Panel>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
     </div>
   );
 }

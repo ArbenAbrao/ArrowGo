@@ -1,0 +1,71 @@
+// src/Components/Visitors/AddVisitorModal.jsx
+import { Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+
+export default function AddVisitorModal({ isOpen, onClose, form, onChange, onSubmit }) {
+  return (
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <div className="fixed inset-0 bg-black bg-opacity-30" />
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
+              <div className="flex items-center gap-2 p-4 bg-blue-500 text-white rounded-t-2xl">
+                <Dialog.Title className="text-lg font-semibold">Add Visitor</Dialog.Title>
+              </div>
+              <div className="p-6 text-gray-700">
+                <form onSubmit={onSubmit} className="space-y-3">
+                  <input type="text" name="visitorName" placeholder="Full Name" value={form.visitorName} onChange={onChange} className="border p-2 w-full rounded" required />
+                  <input type="text" name="company" placeholder="Company / From" value={form.company} onChange={onChange} className="border p-2 w-full rounded" />
+                  <input type="text" name="personToVisit" placeholder="Person to Visit" value={form.personToVisit} onChange={onChange} className="border p-2 w-full rounded" />
+                  <input type="text" name="purpose" placeholder="Purpose" value={form.purpose} onChange={onChange} className="border p-2 w-full rounded" />
+
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <select name="idType" value={form.idType} onChange={onChange} className="border p-2 w-full rounded" required>
+                      <option value="">Select ID Type</option>
+                      <option value="PhilHealth ID">PhilHealth ID</option>
+                      <option value="SSS ID">SSS ID</option>
+                      <option value="Driver's License">Driver's License</option>
+                      <option value="TIN ID">TIN ID</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <input type="text" name="idNumber" placeholder="ID Number" value={form.idNumber} onChange={onChange} className="border p-2 w-full rounded" required />
+                  </div>
+
+                  <select name="badgeNumber" value={form.badgeNumber} onChange={onChange} className="border p-2 w-full rounded" required>
+                    <option value="">Select Badge Number</option>
+                    {Array.from({ length: 15 }, (_, i) => (
+                      <option key={i} value={i + 1}>{i + 1}</option>
+                    ))}
+                  </select>
+
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <select name="vehicleMode" value={form.vehicleMode} onChange={onChange} className="border p-2 w-full rounded">
+                      <option>On Foot</option>
+                      <option>Truck</option>
+                      <option>Company Vehicle</option>
+                      <option>Private Car</option>
+                      <option>Motorcycle</option>
+                      <option>Other</option>
+                    </select>
+
+                    {form.vehicleMode !== "On Foot" && (
+                      <input type="text" name="vehicleDetails" placeholder="Vehicle Details (plate / note)" value={form.vehicleDetails} onChange={onChange} className="border p-2 w-full rounded" />
+                    )}
+                  </div>
+
+                  <input type="date" name="date" value={form.date} onChange={onChange} className="border p-2 w-full rounded" />
+
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button type="button" onClick={onClose} className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
+                    <button type="submit" className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition">Add Visitor</button>
+                  </div>
+                </form>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+}

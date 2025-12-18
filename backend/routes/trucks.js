@@ -83,4 +83,27 @@ router.delete("/trucks/:id", (req, res) => {
   });
 });
 
+// -------------------- GET TOTAL REGISTERED TRUCKS --------------------
+router.get("/total-registered", (req, res) => {
+  db.query("SELECT COUNT(*) AS totalTrucks FROM clients", (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.json({ totalTrucks: result[0].totalTrucks });
+  });
+});
+
+// -------------------- GET TRUCK IN/OUT REPORT --------------------
+router.get("/in-out-report", (req, res) => {
+  db.query(
+    `SELECT 
+       SUM(CASE WHEN timeOut IS NULL THEN 1 ELSE 0 END) AS trucksIn,
+       SUM(CASE WHEN timeOut IS NOT NULL THEN 1 ELSE 0 END) AS trucksOut
+     FROM trucks`,
+    (err, result) => {
+      if (err) return res.status(500).json(err);
+      res.json(result[0]);
+    }
+  );
+});
+
+
 module.exports = router;
