@@ -1,11 +1,14 @@
-// src/Pages/Visitors.jsx
 import React, { useState, useEffect, Fragment } from "react";
-import { Dialog, Transition } from "@headlessui/react";
 import axios from "axios";
+import { Dialog, Transition } from "@headlessui/react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
 import AddVisitorModal from "../Components/Visitors/AddVisitorModal";
 import EditVisitorModal from "../Components/Visitors/EditVisitorModal";
 import DeleteVisitorModal from "../Components/Visitors/DeleteVisitorModal";
 import AppointmentRequestsModal from "../Components/Visitors/AppointmentRequestsModal";
+import CompleteVisitorsListModal from "../Components/Visitors/CompleteVisitorsListModal.jsx";
 
 
 import {
@@ -13,33 +16,25 @@ import {
   PencilSquareIcon,
   TrashIcon,
   ClockIcon,
-  PencilIcon,
   CalendarDaysIcon,
   IdentificationIcon,
   TagIcon,
   TruckIcon,
   ClipboardDocumentListIcon,
-  BellIcon,
-  CheckIcon,
-  XMarkIcon,
 } from "@heroicons/react/24/outline";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 
 export default function Visitors() {
   const [visitors, setVisitors] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editModal, setEditModal] = useState({ open: false, visitor: null });
   const [deleteModal, setDeleteModal] = useState({ open: false, visitorId: null });
-  const [filterDate, setFilterDate] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAppointments, setShowAppointments] = useState(false);
 
-  // Appointment modal state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterDate, setFilterDate] = useState(null);
+
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [processingId, setProcessingId] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
@@ -54,12 +49,12 @@ export default function Visitors() {
     vehicleMode: "On Foot",
     vehicleDetails: "",
     date: new Date().toISOString().split("T")[0],
-    timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    timeIn: "",
     timeOut: "",
     appointmentRequest: false,
   });
 
-  // Fetch Visitors
+  /* ================= FETCH VISITORS ================= */
   const fetchVisitors = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/visitors");
@@ -73,11 +68,7 @@ export default function Visitors() {
     fetchVisitors();
   }, []);
 
-
-  const [appointmentFilterDate, setAppointmentFilterDate] = useState(null);
-
-
-  // ----- Add Visitor Handlers -----
+  /* ================= ADD VISITOR ================= */
   const handleAddChange = (e) => {
     const { name, value } = e.target;
     setAddForm({ ...addForm, [name]: value });
@@ -86,32 +77,23 @@ export default function Visitors() {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5000/api/visitors/add", addForm);
+      const res = await axios.post(
+        "http://localhost:5000/api/visitors/add",
+        addForm
+      );
       setVisitors((prev) => [res.data, ...prev]);
       setIsAddModalOpen(false);
-      setAddForm({
-        visitorName: "",
-        company: "",
-        personToVisit: "",
-        purpose: "",
-        idType: "",
-        idNumber: "",
-        badgeNumber: "",
-        vehicleMode: "On Foot",
-        vehicleDetails: "",
-        date: new Date().toISOString().split("T")[0],
-        timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        timeOut: "",
-        appointmentRequest: false,
-      });
     } catch (err) {
       console.error(err);
     }
   };
 
-  // ----- Edit Visitor Handlers -----
-  const handleEditOpen = (visitor) => setEditModal({ open: true, visitor });
-  const handleEditClose = () => setEditModal({ open: false, visitor: null });
+  /* ================= EDIT VISITOR ================= */
+  const handleEditOpen = (visitor) =>
+    setEditModal({ open: true, visitor });
+
+  const handleEditClose = () =>
+    setEditModal({ open: false, visitor: null });
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
@@ -129,7 +111,9 @@ export default function Visitors() {
         editModal.visitor
       );
       setVisitors((prev) =>
-        prev.map((v) => (v.id === editModal.visitor.id ? res.data : v))
+        prev.map((v) =>
+          v.id === editModal.visitor.id ? res.data : v
+        )
       );
       handleEditClose();
     } catch (err) {
@@ -137,47 +121,71 @@ export default function Visitors() {
     }
   };
 
-  // ----- Time Out -----
+  /* ================= TIME OUT ================= */
   const handleTimeOut = async (visitor) => {
-    const updatedVisitor = {
+    const updated = {
       ...visitor,
-      timeOut: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timeOut: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
+
     try {
-      await axios.put(`http://localhost:5000/api/visitors/${visitor.id}`, updatedVisitor);
-      setVisitors((prev) => prev.map((v) => (v.id === visitor.id ? updatedVisitor : v)));
+      await axios.put(
+        `http://localhost:5000/api/visitors/${visitor.id}`,
+        updated
+      );
+      setVisitors((prev) =>
+        prev.map((v) => (v.id === visitor.id ? updated : v))
+      );
     } catch (err) {
       console.error(err);
     }
   };
 
-  // ----- Delete Visitor -----
-  const handleDeleteOpen = (id) => setDeleteModal({ open: true, visitorId: id });
-  const handleDeleteClose = () => setDeleteModal({ open: false, visitorId: null });
-
+  /* ================= DELETE VISITOR ================= */
+    const handleDeleteOpen = (id) => setDeleteModal({ open: true, visitorId: id });
   const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/visitors/${deleteModal.visitorId}`);
-      setVisitors((prev) => prev.filter((v) => v.id !== deleteModal.visitorId));
-      handleDeleteClose();
+      await axios.delete(
+        `http://localhost:5000/api/visitors/${deleteModal.visitorId}`
+      );
+      setVisitors((prev) =>
+        prev.filter((v) => v.id !== deleteModal.visitorId)
+      );
+      setDeleteModal({ open: false, visitorId: null });
     } catch (err) {
       console.error(err);
     }
   };
 
-  // ----- Appointment modal actions -----
-  const appointmentRequests = visitors.filter((v) => v.appointmentRequest);
+  /* ================= APPOINTMENTS ================= */
+  const appointmentRequests = visitors.filter(
+    (v) => v.appointmentRequest
+  );
 
   const acceptAppointment = async (visitor) => {
     try {
       setProcessingId(visitor.id);
 
-      // Set current time as Time In
-      const currentTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const updated = { ...visitor, appointmentRequest: false, timeIn: currentTime };
+      const updated = {
+        ...visitor,
+        appointmentRequest: false,
+        timeIn: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
 
-      const res = await axios.put(`http://localhost:5000/api/visitors/${visitor.id}`, updated);
-      setVisitors((prev) => prev.map((v) => (v.id === visitor.id ? res.data : v)));
+      const res = await axios.put(
+        `http://localhost:5000/api/visitors/${visitor.id}`,
+        updated
+      );
+
+      setVisitors((prev) =>
+        prev.map((v) => (v.id === visitor.id ? res.data : v))
+      );
       setProcessingId(null);
     } catch (err) {
       console.error(err);
@@ -188,8 +196,12 @@ export default function Visitors() {
   const rejectAppointment = async (visitorId) => {
     try {
       setProcessingId(visitorId);
-      await axios.delete(`http://localhost:5000/api/visitors/${visitorId}`);
-      setVisitors((prev) => prev.filter((v) => v.id !== visitorId));
+      await axios.delete(
+        `http://localhost:5000/api/visitors/${visitorId}`
+      );
+      setVisitors((prev) =>
+        prev.filter((v) => v.id !== visitorId)
+      );
       setProcessingId(null);
     } catch (err) {
       console.error(err);
@@ -197,95 +209,113 @@ export default function Visitors() {
     }
   };
 
-  // ----- Filter & Search -----
-  const filteredVisitors = visitors.filter((visitor) => {
-    if (showAppointments && !visitor.appointmentRequest) return false;
-    if (!showAppointments && visitor.appointmentRequest) return false;
 
-    const matchesDate = filterDate
-      ? new Date(visitor.date).toDateString() === new Date(filterDate).toDateString()
-      : true;
+const [isCompleteListModalOpen, setIsCompleteListModalOpen] = useState(false);
 
-    const matchesSearch =
-      (visitor.visitorName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (visitor.personToVisit || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (visitor.idNumber || "").toLowerCase().includes(searchTerm.toLowerCase());
+// Export CSV function for completed visitors
+const exportCompleteCSV = () => {
+  const rows = visitors
+    .filter((v) => v.timeOut)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    return matchesDate && matchesSearch;
-  });
+  const csvContent =
+    "data:text/csv;charset=utf-8," +
+    [
+      "Visitor Name,Company,Person To Visit,Purpose,Date,Time In,Time Out",
+      ...rows.map((v) =>
+        [
+          v.visitorName,
+          v.company,
+          v.personToVisit,
+          v.purpose,
+          new Date(v.date).toLocaleDateString(),
+          v.timeIn,
+          v.timeOut,
+        ].join(",")
+      ),
+    ].join("\n");
 
-  // ----- Pagination -----
-  const indexOfLastVisitor = currentPage * itemsPerPage;
-  const indexOfFirstVisitor = indexOfLastVisitor - itemsPerPage;
-  const currentVisitors = filteredVisitors.slice(indexOfFirstVisitor, indexOfLastVisitor);
-  const totalPages = Math.ceil(filteredVisitors.length / itemsPerPage);
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `completed_visitors_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
-  const openAppointmentModal = () => setIsAppointmentModalOpen(true);
-  const closeAppointmentModal = () => setIsAppointmentModalOpen(false);
-  const appointmentsCount = appointmentRequests.length;
+
+  /* ================= FILTER + PAGINATION ================= */
+const filteredVisitors = visitors.filter((v) => {
+  const matchesSearch =
+    v.visitorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    v.personToVisit.toLowerCase().includes(searchTerm.toLowerCase());
+
+  const matchesDate = filterDate
+    ? new Date(v.date).toDateString() ===
+      new Date(filterDate).toDateString()
+    : true;
+
+  const isActive = !v.timeOut; // only show visitors without timeOut
+
+  return !v.appointmentRequest && isActive && matchesSearch && matchesDate;
+});
+
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
+  const currentVisitors = filteredVisitors.slice(
+    indexOfFirst,
+    indexOfLast
+  );
+
+  const totalPages = Math.ceil(
+    filteredVisitors.length / itemsPerPage
+  );
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <UserIcon className="h-12 w-12 text-green-500" />
-          <h1 className="text-2xl font-bold text-gray-800">Visitor Management</h1>
-        </div>
-        {/* Appointment Button */}
-        <button
-          onClick={openAppointmentModal}
-          className="relative flex items-center gap-2 px-4 py-2 rounded font-medium transition bg-gray-200 text-gray-800 hover:bg-gray-250"
-        >
-          <BellIcon className="w-5 h-5" />
-          Appointment Requests
-          {appointmentsCount > 0 && (
-            <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-              {appointmentsCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Controls */}
-      {!showAppointments && (
-        <div className="flex flex-wrap gap-4 mb-4 items-center">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Visitor Management</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsAppointmentModalOpen(true)}
+            className="bg-yellow-500 text-white px-4 py-2 rounded-lg"
+          >
+            Appointment Requests ({appointmentRequests.length})
+          </button>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-medium transition"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
           >
             Add Visitor
           </button>
-        </div>
-      )}
+<button
+  onClick={() => setIsCompleteListModalOpen(true)}
+  className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg"
+>
+  View Completed Visitors
+</button>
 
-      {/* Search & Filter */}
-      <div className="mb-4 flex flex-col md:flex-row gap-4 items-center">
+
+        </div>
+      </div>
+
+      <div className="flex gap-4 mb-4">
         <input
-          type="text"
-          placeholder={`Search visitors...`}
+          className="border p-2 rounded w-full"
+          placeholder="Search visitor..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full md:w-1/2 border p-2 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
         />
         <DatePicker
           selected={filterDate}
           onChange={(date) => setFilterDate(date)}
-          dateFormat="MMM d, yyyy"
-          placeholderText="Filter by date"
+          placeholderText="Filter date"
           className="border p-2 rounded"
         />
-        {filterDate && (
-          <button
-            onClick={() => setFilterDate(null)}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 transition"
-          >
-            Clear
-          </button>
-        )}
       </div>
 
-      {/* Visitor / Appointment Cards */}
+            {/* Visitor / Appointment Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {currentVisitors.map((visitor) => {
           const isActive = !visitor.timeOut;
@@ -459,23 +489,46 @@ export default function Visitors() {
         </div>
       )}
 
-{/* ---------- Modern Appointment Requests Modal with Hover Animation ---------- */}
-<AppointmentRequestsModal
-  isOpen={isAppointmentModalOpen}
-  onClose={closeAppointmentModal}
-  appointmentRequests={appointmentRequests}
-  acceptAppointment={acceptAppointment}
-  rejectAppointment={rejectAppointment}
-  processingId={processingId}
-  appointmentFilterDate={appointmentFilterDate}
-  setAppointmentFilterDate={setAppointmentFilterDate}
+      {/* MODALS */}
+      <AppointmentRequestsModal
+        isOpen={isAppointmentModalOpen}
+        onClose={() => setIsAppointmentModalOpen(false)}
+        appointmentRequests={appointmentRequests}
+        acceptAppointment={acceptAppointment}
+        rejectAppointment={rejectAppointment}
+        processingId={processingId}
+      />
+
+      <AddVisitorModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        form={addForm}
+        onChange={handleAddChange}
+        onSubmit={handleAddSubmit}
+      />
+
+      <EditVisitorModal
+        isOpen={editModal.open}
+        onClose={handleEditClose}
+        visitor={editModal.visitor}
+        onChange={handleEditChange}
+        onSubmit={handleEditSubmit}
+      />
+
+      <DeleteVisitorModal
+        isOpen={deleteModal.open}
+        onClose={() =>
+          setDeleteModal({ open: false, visitorId: null })
+        }
+        onConfirm={handleDeleteConfirm}
+      />
+      <CompleteVisitorsListModal
+  isOpen={isCompleteListModalOpen}
+  onClose={() => setIsCompleteListModalOpen(false)}
+  visitors={visitors}
+  filterDate={filterDate}
+  onExport={exportCompleteCSV}
 />
-
-<AddVisitorModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} form={addForm} onChange={handleAddChange} onSubmit={handleAddSubmit} />
-
-<EditVisitorModal isOpen={editModal.open} onClose={handleEditClose} visitor={editModal.visitor} onChange={handleEditChange} onSubmit={handleEditSubmit} />
-
-<DeleteVisitorModal isOpen={deleteModal.open} onClose={handleDeleteClose} onConfirm={handleDeleteConfirm} />
 
     </div>
   );

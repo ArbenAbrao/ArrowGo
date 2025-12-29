@@ -8,11 +8,14 @@ export default function HeaderSec({ isScrolled, onLoginClick }) {
       }`}
     >
       <div className="flex items-center justify-between px-10 py-4">
+        {/* Logo slightly right from left */}
         <img
           src={isScrolled ? "/logo5.png" : "/logo5-white.png"}
           alt="Logo"
-          className="h-10 transition-all duration-500"
+          className="h-16 transition-all duration-500 ml-8" // increased margin to move slightly right
         />
+
+        {/* LOGIN button stays on the right */}
         <button
           onClick={onLoginClick}
           className={`px-6 py-2 rounded-md font-semibold transition ${

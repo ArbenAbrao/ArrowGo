@@ -1,14 +1,42 @@
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const images = [
+  "/Truck1.jpg",
+  "/Truck2.jpg",
+  "/Truck3.jpg",
+  "/Truck4.jpg",
+  "/Truck5.jpg",
+  "/Truck6.jpg",
+  "/Truck7.jpg",
+];
 
 export default function Hero() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Auto-slide every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
-      <img
-        src="/Truck1.jpg"
-        alt="ArrowGo Logistics"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {/* Carousel Images */}
+      <AnimatePresence>
+        <motion.img
+          key={currentIndex}
+          src={images[currentIndex]}
+          alt="ArrowGo Logistics"
+          className="absolute inset-0 w-full h-full object-cover"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 1 }}
+        />
+      </AnimatePresence>
 
       {/* Dark Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80"></div>
@@ -32,10 +60,7 @@ export default function Hero() {
 
         {/* Heading */}
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
-          WORLD CLASS{" "}
-          <span className="block text-green-400">
-            LOGISTICS SYSTEM
-          </span>
+          WORLD CLASS <span className="block text-green-400">LOGISTICS SYSTEM</span>
         </h1>
 
         {/* Description */}
@@ -45,25 +70,21 @@ export default function Hero() {
         </p>
 
         {/* CTA */}
-<motion.button
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.97 }}
-  onClick={() => {
-    const section = document.getElementById("about");
-    if (!section) return;
-
-    const yOffset = -80; // adjust if header height changes
-    const y =
-      section.getBoundingClientRect().top +
-      window.pageYOffset +
-      yOffset;
-
-    window.scrollTo({ top: y, behavior: "smooth" });
-  }}
-  className="bg-blue-600 px-8 py-4 rounded-md font-semibold tracking-wide hover:bg-blue-500 transition"
->
-  GET STARTED →
-</motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => {
+            const section = document.getElementById("about");
+            if (!section) return;
+            const yOffset = -80;
+            const y =
+              section.getBoundingClientRect().top + window.pageYOffset + yOffset;
+            window.scrollTo({ top: y, behavior: "smooth" });
+          }}
+          className="bg-blue-600 px-8 py-4 rounded-md font-semibold tracking-wide hover:bg-blue-500 transition"
+        >
+          GET STARTED →
+        </motion.button>
       </motion.div>
     </section>
   );

@@ -2,17 +2,29 @@
 import React, { useEffect, useState, Fragment } from "react";
 import axios from "axios";
 import { Dialog, Transition } from "@headlessui/react";
+import RegisteredTrucksModal from "../Components/Trucks/RegisteredTrucksModal";
 
 export default function Request() {
   const [requests, setRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [isRegisteredModalOpen, setIsRegisteredModalOpen] = useState(false);
 
-  // Load pending requests from localStorage
   useEffect(() => {
     const pending = JSON.parse(localStorage.getItem("pendingRequests")) || [];
     setRequests(pending);
+    fetchClients();
   }, []);
+
+  const fetchClients = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/clients");
+      setClients(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const openModal = (req) => {
     setSelectedRequest(req);
@@ -24,10 +36,9 @@ export default function Request() {
     setIsModalOpen(false);
   };
 
-  // ✅ Approve request
+  // ✅ APPROVE REQUEST
   const approve = async (req) => {
     try {
-      // Appointment request
       if (req.type === "appointment") {
         const appointmentVisitor = {
           visitorName: req.data.visitorName,
@@ -51,18 +62,27 @@ export default function Request() {
         );
       }
 
-      // Truck request → save to clients table
       if (req.type === "truck") {
+        // POST to register-truck endpoint
         const truckPayload = {
-          clientName: req.data.clientName,
-          truckType: req.data.truckType,
           plateNumber: req.data.plateNumber,
+          truckType: req.data.truckType,
+          clientName: req.data.clientName,
         };
 
-        await axios.post("http://localhost:5000/api/clients", truckPayload);
+        await axios.post(
+          "http://localhost:5000/api/register-truck",
+          truckPayload
+        );
+
+        // Refresh clients list
+        fetchClients();
+
+        // Open Registered Trucks modal automatically
+        setIsRegisteredModalOpen(true);
       }
 
-      // Remove from pending requests
+      // Remove approved request
       removeRequest(req.id);
       closeModal();
     } catch (err) {
@@ -71,20 +91,17 @@ export default function Request() {
     }
   };
 
-  // Reject request
   const reject = (id) => {
     removeRequest(id);
     closeModal();
   };
 
-  // Remove request from local state and localStorage
   const removeRequest = (id) => {
     const updated = requests.filter((r) => r.id !== id);
     setRequests(updated);
     localStorage.setItem("pendingRequests", JSON.stringify(updated));
   };
 
-  // Separate requests by type
   const appointmentRequests = requests.filter((r) => r.type === "appointment");
   const truckRequests = requests.filter((r) => r.type === "truck");
 
@@ -94,11 +111,12 @@ export default function Request() {
         Pending Requests
       </h1>
 
-      {/* Appointment Requests */}
+      {/* APPOINTMENT REQUESTS */}
       <section className="mb-12">
         <h2 className="text-xl font-semibold mb-4 text-blue-700">
           Appointment Requests
         </h2>
+
         {appointmentRequests.length === 0 ? (
           <p className="text-gray-500">No pending appointment requests</p>
         ) : (
@@ -125,11 +143,12 @@ export default function Request() {
         )}
       </section>
 
-      {/* Truck Requests */}
+      {/* TRUCK REQUESTS */}
       <section>
         <h2 className="text-xl font-semibold mb-4 text-green-700">
           Truck Requests
         </h2>
+
         {truckRequests.length === 0 ? (
           <p className="text-gray-500">No pending truck requests</p>
         ) : (
@@ -147,13 +166,16 @@ export default function Request() {
                 <p className="text-gray-600">
                   Type: {req.data.truckType}
                 </p>
+                <p className="text-gray-600">
+                  Client: {req.data.clientName}
+                </p>
               </div>
             ))}
           </div>
         )}
       </section>
 
-      {/* Modal */}
+      {/* MODAL */}
       <Transition appear show={isModalOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={closeModal}>
           <div className="fixed inset-0 bg-black bg-opacity-40" />

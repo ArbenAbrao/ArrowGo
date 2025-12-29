@@ -22,6 +22,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function Trucks() {
+  // ---------- States ----------
   const [trucks, setTrucks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -54,6 +55,9 @@ export default function Trucks() {
     timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
   // ---------- Fetch Data ----------
   const fetchTrucks = async () => {
     try {
@@ -78,7 +82,34 @@ export default function Trucks() {
     fetchClients();
   }, []);
 
-  // ---------- Register Truck ----------
+ // ---------- Filtered Trucks ----------
+const filteredTrucks = trucks
+  .filter((truck) => !truck.timeOut) // <-- exclude completed trucks
+  .filter((truck) => {
+    const matchesDate = filterDate
+      ? new Date(truck.date).toDateString() === new Date(filterDate).toDateString()
+      : true;
+
+    const matchesSearch =
+      truck.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      truck.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      truck.truckType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (truck.driver && truck.driver.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return matchesDate && matchesSearch;
+  });
+
+
+  // ---------- Pagination Logic ----------
+  const totalPages = Math.ceil(filteredTrucks.length / itemsPerPage);
+  const paginatedTrucks = filteredTrucks.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const occupiedBays = trucks.filter((t) => !t.timeOut).map((t) => t.bay);
+
+  // ---------- Handlers ----------
   const handleRegisterChange = (e) => {
     const { name, value } = e.target;
     setRegisterForm((prev) => ({ ...prev, [name]: value }));
@@ -98,69 +129,54 @@ export default function Trucks() {
     }
   };
 
-  // ---------- Add Truck ----------
- const handleAddChange = (e) => {
-  const { name, value } = e.target;
-
-  // Special handler for selecting a truck
-  if (name === "__truck_select__") {
-    setAddForm((prev) => ({
-      ...prev,
-      id: value.id,
-      truckType: value.truckType,
-      plateNumber: value.plateNumber,
-    }));
-    return;
-  }
-
-  setAddForm((prev) => {
-    // Reset dependent fields when client changes
-    if (name === "clientName") {
-      return {
+  const handleAddChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "__truck_select__") {
+      setAddForm((prev) => ({
         ...prev,
-        clientName: value,
-        id: "",
-        truckType: "",
-        plateNumber: "",
-      };
+        id: value.id,
+        truckType: value.truckType,
+        plateNumber: value.plateNumber,
+      }));
+      return;
     }
 
-    return {
-      ...prev,
-      [name]: value,
-    };
-  });
-};
-
-const handleAddSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    await axios.post("http://localhost:5000/api/add-truck", addForm);
-    fetchTrucks();
-    setIsAddModalOpen(false);
-    setAddForm({
-      id: "",
-      plateNumber: "",
-      truckType: "",
-      clientName: "",
-      bay: "",
-      driver: "",
-      purpose: "",
-      date: new Date(),
-      timeIn: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+    setAddForm((prev) => {
+      if (name === "clientName") {
+        return {
+          ...prev,
+          clientName: value,
+          id: "",
+          truckType: "",
+          plateNumber: "",
+        };
+      }
+      return { ...prev, [name]: value };
     });
-  } catch (err) {
-    console.error(err);
-  }
-};
+  };
 
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/api/add-truck", addForm);
+      fetchTrucks();
+      setIsAddModalOpen(false);
+      setAddForm({
+        id: "",
+        plateNumber: "",
+        truckType: "",
+        clientName: "",
+        bay: "",
+        driver: "",
+        purpose: "",
+        date: new Date(),
+        timeIn: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-
-
-  // ---------- Time Out ----------
   const handleTimeOut = async (truck) => {
     try {
       const timeout = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -173,7 +189,6 @@ const handleAddSubmit = async (e) => {
     }
   };
 
-  // ---------- Edit ----------
   const handleEditOpen = (truck) => setEditModal({ open: true, truck });
   const handleEditClose = () => setEditModal({ open: false, truck: null });
   const handleEditChange = (e) => {
@@ -200,7 +215,6 @@ const handleAddSubmit = async (e) => {
     }
   };
 
-  // ---------- Delete ----------
   const handleDeleteOpen = (id) => setDeleteModal({ open: true, truckId: id });
   const handleDeleteClose = () => setDeleteModal({ open: false, truckId: null });
   const handleDeleteConfirm = async () => {
@@ -213,30 +227,10 @@ const handleAddSubmit = async (e) => {
     }
   };
 
-  const occupiedBays = trucks.filter((t) => !t.timeOut).map((t) => t.bay);
-
-  // ---------- Filtered Trucks ----------
-  const filteredTrucks = trucks.filter((truck) => {
-    const matchesDate = filterDate
-      ? new Date(truck.date).toDateString() === new Date(filterDate).toDateString()
-      : true;
-
-    const matchesSearch =
-      truck.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      truck.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      truck.truckType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (truck.driver && truck.driver.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    return matchesDate && matchesSearch;
-  });
-
-  // ---------- Export CSV ----------
   const exportCompleteCSV = () => {
     const rows = trucks
       .filter((t) =>
-        filterDate
-          ? new Date(t.date).toDateString() === new Date(filterDate).toDateString()
-          : true
+        filterDate ? new Date(t.date).toDateString() === new Date(filterDate).toDateString() : true
       )
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -339,11 +333,10 @@ const handleAddSubmit = async (e) => {
       <div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         style={{
-          maxHeight: filteredTrucks.length > 9 ? "75vh" : "auto",
-          overflowY: filteredTrucks.length > 9 ? "scroll" : "visible",
+          maxHeight: filteredTrucks.length > 6 ? "75vh" : "auto",
         }}
       >
-        {filteredTrucks.map((truck) => {
+{paginatedTrucks.map((truck) => {
           const isActive = !truck.timeOut;
           return (
             <div
@@ -416,8 +409,6 @@ const handleAddSubmit = async (e) => {
     <span className="font-semibold">Type:</span> {truck.truckType}
   </p>
 </div>
-
-
                 <div className="border-t border-green-200/50"></div>
 
                 <div className="grid grid-cols-2 gap-2 text-green-700 text-sm">
@@ -447,60 +438,51 @@ const handleAddSubmit = async (e) => {
         })}
       </div>
 
+ {/* Pagination Controls */}
+<div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
+  {/* Prev Button */}
+  <button
+    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+    disabled={currentPage === 1}
+    className="px-4 py-2 border rounded bg-white hover:bg-green-100 disabled:opacity-40 transition"
+  >
+    Prev
+  </button>
+
+  {/* Numbered Pages */}
+  {Array.from({ length: totalPages }).map((_, index) => {
+    const pageNum = index + 1;
+    return (
+      <button
+        key={index}
+        onClick={() => setCurrentPage(pageNum)}
+        className={`px-4 py-2 border rounded transition ${
+          currentPage === pageNum
+            ? "bg-green-500 text-white border-green-500"
+            : "bg-white hover:bg-green-100"
+        }`}
+      >
+        {pageNum}
+      </button>
+    );
+  })}
+
+  {/* Next Button */}
+  <button
+    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+    disabled={currentPage === totalPages}
+    className="px-4 py-2 border rounded bg-white hover:bg-green-100 disabled:opacity-40 transition"
+  >
+    Next
+  </button>
+</div>
       {/* Modals */}
-      <DeleteTruckModal
-        open={deleteModal.open}
-        onClose={handleDeleteClose}
-        onConfirm={handleDeleteConfirm}
-        truck={trucks.find((t) => t.id === deleteModal.truckId)}
-      />
-
-      <EditTruckModal
-        open={editModal.open}
-        onClose={handleEditClose}
-        truck={editModal.truck}
-        onChange={handleEditChange}
-        onSubmit={handleEditSubmit}
-        bays={allBays}
-        occupiedBays={occupiedBays}
-      />
-
-      <AddTruckModal
-        open={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddSubmit}
-        form={addForm}
-        onChange={handleAddChange}
-        clients={clients}
-        bays={allBays}
-        occupiedBays={occupiedBays}
-      />
-
-      <CompleteTrucksListModal
-        open={isCompleteListModalOpen}
-        onClose={() => setIsCompleteListModalOpen(false)}
-        trucks={trucks}
-        selectedClient={selectedClient}
-        setSelectedClient={setSelectedClient}
-        filterDate={filterDate}
-        setFilterDate={setFilterDate}
-        onExport={exportCompleteCSV}
-      />
-
-      <RegisterTruckModal
-        open={isRegisterModalOpen}
-        onClose={() => setIsRegisterModalOpen(false)}
-        form={registerForm}
-        onChange={handleRegisterChange}
-        onSubmit={handleRegisterSubmit}
-      />
-
-      <RegisteredTrucksModal
-        open={isRegisteredModalOpen}
-        onClose={() => setIsRegisteredModalOpen(false)}
-        trucks={trucks}
-        clientName={registerForm.clientName}
-      />
+      <DeleteTruckModal open={deleteModal.open} onClose={handleDeleteClose} onConfirm={handleDeleteConfirm} truck={trucks.find((t) => t.id === deleteModal.truckId)} />
+      <EditTruckModal open={editModal.open} onClose={handleEditClose} truck={editModal.truck} onChange={handleEditChange} onSubmit={handleEditSubmit} bays={allBays} occupiedBays={occupiedBays} />
+      <AddTruckModal open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSubmit={handleAddSubmit} form={addForm} onChange={handleAddChange} clients={clients} bays={allBays} occupiedBays={occupiedBays} />
+      <CompleteTrucksListModal open={isCompleteListModalOpen} onClose={() => setIsCompleteListModalOpen(false)} trucks={trucks} selectedClient={selectedClient} setSelectedClient={setSelectedClient} filterDate={filterDate} setFilterDate={setFilterDate} onExport={exportCompleteCSV} />
+      <RegisterTruckModal open={isRegisterModalOpen} onClose={() => setIsRegisterModalOpen(false)} form={registerForm} onChange={handleRegisterChange} onSubmit={handleRegisterSubmit} />
+      <RegisteredTrucksModal open={isRegisteredModalOpen} onClose={() => setIsRegisteredModalOpen(false)} trucks={trucks} clientName={registerForm.clientName}/>
     </div>
   );
 }

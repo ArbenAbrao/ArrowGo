@@ -1,3 +1,4 @@
+// src/Pages/Welcome.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../Components/Modals/LoginModal";
@@ -12,7 +13,6 @@ import Divider from "../Components/Sections/Divider";
 import Request from "../Components/Sections/Request"; // import it
 import About from "../Components/Sections/about";
 
-
 // React Icons
 import { FaWarehouse, FaTruck, FaBoxOpen } from "react-icons/fa";
 import { AiOutlineGlobal } from "react-icons/ai";
@@ -21,6 +21,7 @@ import { MdOutlineInventory, MdOutlineLocalShipping } from "react-icons/md";
 export default function Welcome() {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [redirectAfterLogin, setRedirectAfterLogin] = useState(null); // <-- Added
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -47,13 +48,22 @@ export default function Welcome() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (email === "Admin" && password === "Admin123") {
-      localStorage.setItem("isLoggedIn", "true");
+const handleLogin = (e) => {
+  e.preventDefault();
+  if (email === "Admin" && password === "Admin123") {
+    localStorage.setItem("isLoggedIn", "true");
+    setIsModalOpen(false);
+
+    if (redirectAfterLogin) {
+      // Open redirect path in new tab
+      window.open(redirectAfterLogin, "_blank");
+      setRedirectAfterLogin(null);
+    } else {
       navigate("/dashboard", { replace: true });
-    } else setError("Invalid email or password");
-  };
+    }
+  } else setError("Invalid email or password");
+};
+
 
   const services = [
     { title: "Warehousing / Storage", frontDesc: "Top-notch...", backDesc: "Reliable...", icon: <FaWarehouse className="text-5xl text-green-500 mb-4" />, btnText: "Learn More" },
@@ -66,12 +76,17 @@ export default function Welcome() {
 
   return (
     <div className="w-full overflow-x-hidden">
-      <HeaderSec isScrolled={isScrolled} onLoginClick={() => setIsModalOpen(true)} />      
+      <HeaderSec isScrolled={isScrolled} onLoginClick={() => setIsModalOpen(true)} />
       <Hero />
       <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
       <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
       <About />
-      <Request />
+<Request
+  onLoginClick={(path) => {
+    setRedirectAfterLogin(path); // store path
+    setIsModalOpen(true); // open login modal
+  }}
+/>
       <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
       <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
       <Services services={services} />
@@ -90,6 +105,7 @@ export default function Welcome() {
         password={password}
         setPassword={setPassword}
         error={error}
+        message="Please log in to continue"
       />
     </div>
   );

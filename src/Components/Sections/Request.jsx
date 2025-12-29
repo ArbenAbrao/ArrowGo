@@ -1,8 +1,9 @@
+// src/Components/Sections/Request.jsx
 import { motion } from "framer-motion";
 import { FaTruck, FaCalendarAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-export default function Request() {
+export default function Request({ onLoginClick }) {
   const navigate = useNavigate();
 
   const cards = [
@@ -17,6 +18,7 @@ export default function Request() {
       btnColor: "bg-green-600 hover:bg-green-500",
       iconColor: "text-green-900",
       iconGlow: "shadow-green-400",
+      requiresLogin: true,
     },
     {
       title: "Set Appointment",
@@ -29,13 +31,13 @@ export default function Request() {
       btnColor: "bg-blue-600 hover:bg-blue-500",
       iconColor: "text-blue-900",
       iconGlow: "shadow-blue-400",
+      requiresLogin: false,
     },
   ];
 
   return (
     <section className="bg-white py-20">
       <div className="max-w-6xl mx-auto px-6 text-center">
-        {/* Gradient heading */}
         <h2 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-green-500">
           Register Truck & Set Appointment
         </h2>
@@ -52,7 +54,6 @@ export default function Request() {
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: i * 0.2, type: "spring", stiffness: 100 }}
               >
-                {/* Icon with glow and pop */}
                 <motion.div
                   whileHover={{ y: -5, scale: 1.1 }}
                   className={`mb-4 inline-block transition-shadow duration-300 hover:shadow-[0_0_20px_3px_${card.iconGlow}] rounded-full`}
@@ -64,21 +65,20 @@ export default function Request() {
                   {card.title}
                 </h3>
                 <p className={`mb-6 ${card.textColor}`}>{card.desc}</p>
+<motion.button
+  whileHover={{ scale: 1.05, y: -2 }}
+  className={`${card.btnColor} text-white px-6 py-3 rounded-lg font-medium transition`}
+  onClick={() => {
+    if (card.link === "/appointment") {
+      window.open(card.link, "_blank"); // open in new tab
+    } else {
+      onLoginClick("/truck-request"); // pass path to login modal
+    }
+  }}
+>
+  {card.btnText}
+</motion.button>
 
-                {/* Button with subtle hover animation */}
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  className={`${card.btnColor} text-white px-6 py-3 rounded-lg font-medium transition`}
-                  onClick={() => {
-                    if (card.link === "/appointment") {
-                      window.open(card.link, "_blank"); // open in new tab
-                    } else {
-                      navigate(card.link);
-                    }
-                  }}
-                >
-                  {card.btnText}
-                </motion.button>
               </motion.div>
             );
           })}

@@ -124,7 +124,7 @@ export default function AppointmentRequestsModal({
                               day: "numeric",
                             })}
                           </p>
-                          <p>
+                          <p> 
                             <span className="font-semibold text-gray-900">Time:</span>{" "}
                             {visitor.timeIn}
                           </p>

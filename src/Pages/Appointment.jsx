@@ -28,23 +28,30 @@ export default function Appointment() {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post("http://localhost:5000/api/visitors/add", form);
-      setIsModalOpen(true);
-      setForm({
-        visitorName: "",
-        company: "",
-        personToVisit: "",
-        purpose: "",
-        date: "",
-        appointmentRequest: true,
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const pending = JSON.parse(localStorage.getItem("pendingRequests")) || [];
+
+  pending.push({
+    id: Date.now(),
+    type: "appointment",
+    data: form,
+  });
+
+  localStorage.setItem("pendingRequests", JSON.stringify(pending));
+
+  setIsModalOpen(true);
+  setForm({
+    visitorName: "",
+    company: "",
+    personToVisit: "",
+    purpose: "",
+    date: "",
+    appointmentRequest: true,
+  });
+};
+
 
   return (
     <div
@@ -263,7 +270,7 @@ export default function Appointment() {
                 </a>
               </div>
             </div>
-          </div>
+          </div> 
 
           <div className="border-t border-gray-200 mt-4 pt-2 text-center text-gray-500 text-xs sm:text-sm rounded-b-xl">
             &copy; {new Date().getFullYear()} ArrowGo Logistics Inc. All rights reserved.
