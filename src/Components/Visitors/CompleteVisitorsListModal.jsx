@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+// src/Components/Visitors/CompleteVisitorsListModal.jsx
+import React, { useState, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
 import { UserIcon, ClockIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { motion } from "framer-motion";
 
-export default function CompleteVisitorsListModal({ isOpen, onClose, visitors, onExport }) {
+export default function CompleteVisitorsListModal({ isOpen, onClose, visitors, darkMode = true }) {
   const completedVisitors = visitors.filter((v) => v.timeOut);
 
-  // Date range state
   const [dateRange, setDateRange] = useState([null, null]);
   const [startDate, endDate] = dateRange;
 
@@ -26,6 +26,26 @@ export default function CompleteVisitorsListModal({ isOpen, onClose, visitors, o
     return date >= startDate && date <= endDate;
   };
 
+  const theme = darkMode
+    ? {
+        modalBg: "bg-gray-900 text-gray-100",
+        headerBg: "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white",
+        inputBg: "bg-gray-800 text-gray-100 border-gray-700",
+        btnPrimary: "bg-cyan-500 hover:bg-cyan-600 text-black",
+        btnSecondary: "border text-gray-100 hover:bg-gray-700",
+        cardBg: "bg-gray-800 text-gray-100",
+        cardHover: "hover:shadow-[0_0_12px_#00ff66] hover:scale-105",
+      }
+    : {
+        modalBg: "bg-white text-gray-900",
+        headerBg: "bg-gradient-to-r from-indigo-400 to-indigo-200 text-gray-900",
+        inputBg: "bg-gray-100 text-gray-900 border-gray-300",
+        btnPrimary: "bg-indigo-600 hover:bg-indigo-700 text-white",
+        btnSecondary: "border text-gray-900 hover:bg-gray-100",
+        cardBg: "bg-white text-gray-900",
+        cardHover: "hover:shadow-lg hover:scale-105",
+      };
+
   const handleExport = () => {
     const exportData = filteredVisitors.map(v => ({
       Name: v.visitorName,
@@ -35,12 +55,10 @@ export default function CompleteVisitorsListModal({ isOpen, onClose, visitors, o
       TimeIn: v.timeIn,
       TimeOut: v.timeOut,
     }));
-
     const csv = [
       Object.keys(exportData[0]).join(","),
       ...exportData.map(row => Object.values(row).join(",")),
     ].join("\n");
-
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -62,7 +80,7 @@ export default function CompleteVisitorsListModal({ isOpen, onClose, visitors, o
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 bg-black/25" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -76,74 +94,63 @@ export default function CompleteVisitorsListModal({ isOpen, onClose, visitors, o
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title className="text-xl font-semibold text-black">
-                  Completed Visitors
-                </Dialog.Title>
-
-                {/* Date Range Picker + Export */}
-                <div className="mt-4 flex gap-2 items-center">
-                  <DatePicker
-                    selectsRange
-                    startDate={startDate}
-                    endDate={endDate}
-                    onChange={(update) => setDateRange(update)}
-                    isClearable={true}
-                    placeholderText="Select date range"
-                    className="border p-2 rounded w-full text-black"
-                  />
-                  <button
-                    onClick={handleExport}
-                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition-all duration-300 transform hover:scale-105 shadow-md"
-                  >
-                    Export CSV
-                  </button>
+              <Dialog.Panel className={`w-full max-w-4xl transform overflow-hidden rounded-2xl shadow-2xl transition-all ${theme.modalBg}`}>
+                
+                {/* Header */}
+                <div className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 ${theme.headerBg}`}>
+                  <h2 className="text-xl font-semibold">Completed Visitors</h2>
+                  <div className="flex gap-2 mt-2 md:mt-0">
+                    <DatePicker
+                      selectsRange
+                      startDate={startDate}
+                      endDate={endDate}
+                      onChange={setDateRange}
+                      isClearable
+                      placeholderText="Select date range"
+                      className={`border p-2 rounded w-full ${theme.inputBg} ${theme.btnSecondary}`}
+                    />
+                    <button
+                      onClick={handleExport}
+                      className={`px-4 py-2 rounded ${theme.btnPrimary} transition transform hover:scale-105`}
+                    >
+                      Export CSV
+                    </button>
+                    <button
+                      onClick={onClose}
+                      className={`px-4 py-2 rounded ${theme.btnSecondary} transition transform hover:scale-105`}
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
 
                 {/* Visitor Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-5 max-h-[60vh] overflow-y-auto">
                   {filteredVisitors.length === 0 ? (
-                    <p className="text-gray-500 col-span-full text-center">No completed visitors found.</p>
+                    <p className="text-center text-gray-400 col-span-full py-6">No completed visitors found.</p>
                   ) : (
-                    filteredVisitors.map((visitor) => {
+                    filteredVisitors.map(visitor => {
                       const highlight = isInRange(visitor.date);
                       return (
-                        <div
+                        <motion.div
                           key={visitor.id}
-                          className={`p-4 rounded-xl flex flex-col justify-between transition-all duration-500 ${
-                            highlight
-                              ? "bg-gradient-to-br from-yellow-100 via-yellow-200 to-yellow-300 shadow-2xl scale-105"
-                              : "bg-gradient-to-br from-green-100 to-green-200 shadow-lg hover:shadow-2xl hover:scale-105"
-                          }`}
+                          className={`p-4 rounded-xl flex flex-col justify-between ${theme.cardBg} ${theme.cardHover} transition-all duration-500 ${highlight ? "ring-2 ring-cyan-400" : ""}`}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
                         >
                           <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-green-500 text-white w-fit mb-2 animate-pulse">
                             Completed
                           </span>
-                          <h4 className="font-bold text-black text-lg">{visitor.visitorName}</h4>
-                          <p className="text-sm text-black flex items-center gap-1">
-                            <UserIcon className="w-4 h-4" /> {visitor.personToVisit}
-                          </p>
-                          <p className="text-sm text-black flex items-center gap-1">
-                            <CalendarDaysIcon className="w-4 h-4" /> {new Date(visitor.date).toLocaleDateString()}
-                          </p>
-                          <p className="text-sm text-black flex items-center gap-1">
-                            <ClockIcon className="w-4 h-4" /> {visitor.timeIn} - {visitor.timeOut}
-                          </p>
-                          <p className="text-sm text-black mt-1">{visitor.purpose}</p>
-                        </div>
+                          <h4 className="font-bold text-lg truncate">{visitor.visitorName}</h4>
+                          <p className="flex items-center gap-1 text-sm"><UserIcon className="w-4 h-4" /> {visitor.personToVisit}</p>
+                          <p className="flex items-center gap-1 text-sm"><CalendarDaysIcon className="w-4 h-4" /> {new Date(visitor.date).toLocaleDateString()}</p>
+                          <p className="flex items-center gap-1 text-sm"><ClockIcon className="w-4 h-4" /> {visitor.timeIn} - {visitor.timeOut}</p>
+                          <p className="text-sm mt-1">{visitor.purpose}</p>
+                        </motion.div>
                       );
                     })
                   )}
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 transition"
-                    onClick={onClose}
-                  >
-                    Close
-                  </button>
                 </div>
               </Dialog.Panel>
             </Transition.Child>

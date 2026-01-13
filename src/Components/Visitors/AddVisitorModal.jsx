@@ -1,71 +1,262 @@
 // src/Components/Visitors/AddVisitorModal.jsx
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
+import { UserIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { motion, AnimatePresence } from "framer-motion";
 
-export default function AddVisitorModal({ isOpen, onClose, form, onChange, onSubmit }) {
+export default function AddVisitorModal({
+  isOpen,
+  onClose,
+  form,
+  onChange,
+  onSubmit,
+  darkMode = true,
+}) {
+  const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [showToast, setShowToast] = useState(false);
+
+  const inputVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  const theme = darkMode
+    ? {
+        modalBg: "bg-gray-900 text-gray-100",
+        headerBg: "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white",
+        btnPrimary: "bg-cyan-500 hover:bg-cyan-600 text-black",
+        btnSecondary: "border text-gray-100 hover:bg-gray-700",
+        inputBg: "bg-gray-800 text-gray-100 border-gray-700",
+        dropdownBg: "bg-gray-800 text-gray-100",
+        dropdownHover: "hover:bg-green-400/30",
+        neonGlow: "hover:shadow-[0_0_12px_#00ff66] focus:shadow-[0_0_12px_#00ff66]",
+      }
+    : {
+        modalBg: "bg-white text-gray-900",
+        headerBg: "bg-gradient-to-r from-indigo-400 to-indigo-200 text-gray-900",
+        btnPrimary: "bg-indigo-600 hover:bg-indigo-700 text-white",
+        btnSecondary: "border text-gray-900 hover:bg-gray-100",
+        inputBg: "bg-gray-100 text-gray-900 border-gray-300",
+        dropdownBg: "bg-white text-gray-900",
+        dropdownHover: "hover:bg-indigo-50",
+        neonGlow: "hover:shadow-[0_0_12px_#00ff66] focus:shadow-[0_0_12px_#00ff66]",
+      };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(e);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+    onClose(); // optionally close after submitting
+  };
+
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
-        <div className="fixed inset-0 bg-black bg-opacity-30" />
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
-            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white shadow-xl transition-all">
-              <div className="flex items-center gap-2 p-4 bg-blue-500 text-white rounded-t-2xl">
-                <Dialog.Title className="text-lg font-semibold">Add Visitor</Dialog.Title>
-              </div>
-              <div className="p-6 text-gray-700">
-                <form onSubmit={onSubmit} className="space-y-3">
-                  <input type="text" name="visitorName" placeholder="Full Name" value={form.visitorName} onChange={onChange} className="border p-2 w-full rounded" required />
-                  <input type="text" name="company" placeholder="Company / From" value={form.company} onChange={onChange} className="border p-2 w-full rounded" />
-                  <input type="text" name="personToVisit" placeholder="Person to Visit" value={form.personToVisit} onChange={onChange} className="border p-2 w-full rounded" />
-                  <input type="text" name="purpose" placeholder="Purpose" value={form.purpose} onChange={onChange} className="border p-2 w-full rounded" />
+    <>
+      <Transition appear show={isOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={onClose}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-md" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="scale-95 opacity-0"
+              enterTo="scale-100 opacity-100"
+              leave="ease-in duration-200"
+              leaveFrom="scale-100 opacity-100"
+              leaveTo="scale-95 opacity-0"
+            >
+              <Dialog.Panel
+                as={motion.div}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${theme.modalBg}`}
+              >
+                {/* Header */}
+                <motion.div
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className={`flex items-center gap-2 p-4 ${theme.headerBg} rounded-t-2xl`}
+                >
+                  <UserIcon className="w-6 h-6" />
+                  <Dialog.Title className="text-lg font-semibold">Add Visitor</Dialog.Title>
+                  <button onClick={onClose} className="ml-auto hover:opacity-80 transition">
+                    ✕
+                  </button>
+                </motion.div>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="p-6 space-y-3">
+                  {[
+                    { name: "visitorName", placeholder: "Full Name", required: true },
+                    { name: "company", placeholder: "Company / From" },
+                    { name: "personToVisit", placeholder: "Person to Visit" },
+                    { name: "purpose", placeholder: "Purpose" },
+                  ].map((field, i) => (
+                    <motion.input
+                      key={i}
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ delay: i * 0.05 }}
+                      type="text"
+                      name={field.name}
+                      value={form[field.name]}
+                      onChange={onChange}
+                      placeholder={field.placeholder}
+                      required={field.required || false}
+                      className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
+                    />
+                  ))}
 
                   <div className="grid md:grid-cols-2 gap-3">
-                    <select name="idType" value={form.idType} onChange={onChange} className="border p-2 w-full rounded" required>
-                      <option value="">Select ID Type</option>
-                      <option value="PhilHealth ID">PhilHealth ID</option>
-                      <option value="SSS ID">SSS ID</option>
-                      <option value="Driver's License">Driver's License</option>
-                      <option value="TIN ID">TIN ID</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <input type="text" name="idNumber" placeholder="ID Number" value={form.idNumber} onChange={onChange} className="border p-2 w-full rounded" required />
+                    {/* ID Type Dropdown */}
+                    <motion.div
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ delay: 0.25 }}
+                      className="relative"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDropdownOpen(dropdownOpen === "idType" ? null : "idType")
+                        }
+                        className={`w-full border p-2 rounded text-left flex justify-between items-center ${theme.inputBg} ${theme.neonGlow}`}
+                      >
+                        {form.idType || "Select ID Type"}
+                        <ChevronDownIcon
+                          className={`w-5 h-5 ml-2 transition-transform ${
+                            dropdownOpen === "idType" ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                      <AnimatePresence>
+                        {dropdownOpen === "idType" && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className={`absolute z-50 w-full rounded shadow-lg mt-1 flex flex-col ${theme.dropdownBg}`}
+                          >
+                            {["PhilHealth ID", "SSS ID", "Driver's License", "TIN ID", "Other"].map((type, i) => (
+                              <span
+                                key={i}
+                                className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
+                                onClick={() => {
+                                  onChange({ target: { name: "idType", value: type } });
+                                  setDropdownOpen(null);
+                                }}
+                              >
+                                {type}
+                              </span>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+
+                    <motion.input
+                      variants={inputVariants}
+                      initial="hidden"
+                      animate="visible"
+                      transition={{ delay: 0.3 }}
+                      type="text"
+                      name="idNumber"
+                      value={form.idNumber}
+                      onChange={onChange}
+                      placeholder="ID Number"
+                      required
+                      className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
+                    />
                   </div>
 
-                  <select name="badgeNumber" value={form.badgeNumber} onChange={onChange} className="border p-2 w-full rounded" required>
+                  <motion.select
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    transition={{ delay: 0.35 }}
+                    name="badgeNumber"
+                    value={form.badgeNumber}
+                    onChange={onChange}
+                    className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
+                    required
+                  >
                     <option value="">Select Badge Number</option>
                     {Array.from({ length: 15 }, (_, i) => (
-                      <option key={i} value={i + 1}>{i + 1}</option>
+                      <option key={i} value={i + 1}>
+                        {i + 1}
+                      </option>
                     ))}
-                  </select>
+                  </motion.select>
 
-                  <div className="grid md:grid-cols-2 gap-3">
-                    <select name="vehicleMode" value={form.vehicleMode} onChange={onChange} className="border p-2 w-full rounded">
-                      <option>On Foot</option>
-                      <option>Truck</option>
-                      <option>Company Vehicle</option>
-                      <option>Private Car</option>
-                      <option>Motorcycle</option>
-                      <option>Other</option>
-                    </select>
+                  <motion.input
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    transition={{ delay: 0.4 }}
+                    type="date"
+                    name="date"
+                    value={form.date}
+                    onChange={onChange}
+                    className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
+                  />
 
-                    {form.vehicleMode !== "On Foot" && (
-                      <input type="text" name="vehicleDetails" placeholder="Vehicle Details (plate / note)" value={form.vehicleDetails} onChange={onChange} className="border p-2 w-full rounded" />
-                    )}
-                  </div>
-
-                  <input type="date" name="date" value={form.date} onChange={onChange} className="border p-2 w-full rounded" />
-
-                  <div className="flex justify-end gap-2 mt-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
-                    <button type="submit" className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition">Add Visitor</button>
+                  <div className="flex justify-end gap-3 mt-4">
+                    <motion.button
+                      type="button"
+                      onClick={onClose}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`px-4 py-2 rounded ${theme.btnSecondary}`}
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      type="submit"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`px-4 py-2 rounded ${theme.btnPrimary}`}
+                    >
+                      Add Visitor
+                    </motion.button>
                   </div>
                 </form>
-              </div>
-            </Dialog.Panel>
+              </Dialog.Panel>
+            </Transition.Child>
           </div>
-        </div>
-      </Dialog>
-    </Transition>
+        </Dialog>
+      </Transition>
+
+      {/* Success Toast */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ duration: 0.4 }}
+            className="fixed bottom-5 right-5 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 font-medium"
+          >
+            Visitor added successfully! ✅
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

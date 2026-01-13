@@ -1,9 +1,26 @@
+// src/Components/Trucks/DeleteTruckModal.jsx
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 
-export default function DeleteTruckModal({ open, onClose, onConfirm, truck }) {
+export default function DeleteTruckModal({ open, onClose, onConfirm, truck, darkMode = true }) {
+  const theme = darkMode
+    ? {
+        modalBg: "bg-gray-900 text-gray-100",
+        headerBg: "bg-red-600 text-white",
+        btnCancel: "border text-gray-100 hover:bg-gray-700",
+        btnDelete: "bg-red-600 hover:bg-red-700 text-white",
+        neonGlow: "hover:shadow-[0_0_12px_#ff0033] focus:shadow-[0_0_12px_#ff0033]",
+      }
+    : {
+        modalBg: "bg-white text-gray-900",
+        headerBg: "bg-red-500 text-white",
+        btnCancel: "border text-gray-900 hover:bg-gray-100",
+        btnDelete: "bg-red-500 hover:bg-red-600 text-white",
+        neonGlow: "hover:shadow-[0_0_12px_#ff0033] focus:shadow-[0_0_12px_#ff0033]",
+      };
+
   return (
     <Transition appear show={open} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -37,20 +54,18 @@ export default function DeleteTruckModal({ open, onClose, onConfirm, truck }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.3 }}
-              className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${theme.modalBg}`}
             >
               {/* Header */}
               <motion.div
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="flex items-center gap-2 p-4 bg-red-500 text-white rounded-t-2xl"
+                className={`flex items-center gap-2 p-4 rounded-t-2xl ${theme.headerBg}`}
               >
                 <TrashIcon className="w-6 h-6" />
                 <Dialog.Title className="text-lg font-semibold">Delete Truck</Dialog.Title>
-                <button onClick={onClose} className="ml-auto hover:text-gray-200 transition">
-                  ✕
-                </button>
+                <button onClick={onClose} className="ml-auto hover:text-gray-200 transition">✕</button>
               </motion.div>
 
               {/* Body */}
@@ -58,11 +73,11 @@ export default function DeleteTruckModal({ open, onClose, onConfirm, truck }) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="p-6 text-gray-700"
+                className="p-6"
               >
                 <p>
                   Are you sure you want to delete{" "}
-                  <span className="font-bold text-red-500">{truck?.plateNumber}</span>{" "}
+                  <span className="font-bold text-red-400">{truck?.plateNumber}</span>{" "}
                   ({truck?.clientName})?
                 </p>
 
@@ -71,15 +86,16 @@ export default function DeleteTruckModal({ open, onClose, onConfirm, truck }) {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={onClose}
-                    className="px-4 py-2 border rounded"
+                    className={`px-4 py-2 rounded ${theme.btnCancel} ${theme.neonGlow}`}
                   >
                     Cancel
                   </motion.button>
+
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={onConfirm}
-                    className="px-4 py-2 bg-red-500 text-white rounded"
+                    className={`px-4 py-2 rounded ${theme.btnDelete} ${theme.neonGlow}`}
                   >
                     Delete
                   </motion.button>

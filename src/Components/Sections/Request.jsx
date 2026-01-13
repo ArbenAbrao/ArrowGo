@@ -1,11 +1,8 @@
 // src/Components/Sections/Request.jsx
 import { motion } from "framer-motion";
 import { FaTruck, FaCalendarAlt } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
 
 export default function Request({ onLoginClick }) {
-  const navigate = useNavigate();
-
   const cards = [
     {
       title: "Register Truck",
@@ -65,20 +62,19 @@ export default function Request({ onLoginClick }) {
                   {card.title}
                 </h3>
                 <p className={`mb-6 ${card.textColor}`}>{card.desc}</p>
-<motion.button
-  whileHover={{ scale: 1.05, y: -2 }}
-  className={`${card.btnColor} text-white px-6 py-3 rounded-lg font-medium transition`}
-  onClick={() => {
-    if (card.link === "/appointment") {
-      window.open(card.link, "_blank"); // open in new tab
-    } else {
-      onLoginClick("/truck-request"); // pass path to login modal
-    }
-  }}
->
-  {card.btnText}
-</motion.button>
-
+                <motion.button
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  className={`${card.btnColor} text-white px-6 py-3 rounded-lg font-medium transition`}
+                  onClick={() => {
+                    if (card.link === "/appointment") {
+                      window.open(card.link, "_blank"); // open in new tab
+                    } else {
+                      onLoginClick("/truck-request"); // pass path to login modal
+                    }
+                  }}
+                >
+                  {card.btnText}
+                </motion.button>
               </motion.div>
             );
           })}

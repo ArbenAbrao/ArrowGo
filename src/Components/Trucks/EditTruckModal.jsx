@@ -11,6 +11,7 @@ export default function EditTruckModal({
   onSubmit,
   bays,
   occupiedBays,
+  darkMode = true,
 }) {
   if (!truck) return null;
 
@@ -18,6 +19,24 @@ export default function EditTruckModal({
     hidden: { opacity: 0, y: -10 },
     visible: { opacity: 1, y: 0 },
   };
+
+  const theme = darkMode
+    ? {
+        modalBg: "bg-gray-900 text-gray-100",
+        headerBg: "bg-yellow-500 text-white",
+        btnPrimary: "bg-green-500 hover:bg-green-600 text-black",
+        btnSecondary: "border text-gray-100 hover:bg-gray-700",
+        inputBg: "bg-gray-800 text-gray-100 border-gray-700",
+        neonGlow: "hover:shadow-[0_0_12px_#00ff66] focus:shadow-[0_0_12px_#00ff66] focus:outline-none",
+      }
+    : {
+        modalBg: "bg-white text-gray-900",
+        headerBg: "bg-yellow-300 text-gray-900",
+        btnPrimary: "bg-green-500 hover:bg-green-600 text-white",
+        btnSecondary: "border text-gray-900 hover:bg-gray-100",
+        inputBg: "bg-gray-100 text-gray-900 border-gray-300",
+        neonGlow: "hover:shadow-[0_0_12px_#00ff66] focus:shadow-[0_0_12px_#00ff66] focus:outline-none",
+      };
 
   return (
     <Transition appear show={open} as={Fragment}>
@@ -52,18 +71,18 @@ export default function EditTruckModal({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.3 }}
-              className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${theme.modalBg}`}
             >
               {/* Header */}
               <motion.div
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="flex items-center gap-2 p-4 bg-yellow-400 text-white rounded-t-2xl"
+                className={`flex items-center gap-2 p-4 ${theme.headerBg} rounded-t-2xl`}
               >
                 <PencilIcon className="w-6 h-6" />
                 <Dialog.Title className="text-lg font-semibold">Edit Truck</Dialog.Title>
-                <button onClick={onClose} className="ml-auto hover:text-gray-200 transition">
+                <button onClick={onClose} className="ml-auto hover:opacity-80 transition">
                   ✕
                 </button>
               </motion.div>
@@ -77,7 +96,7 @@ export default function EditTruckModal({
                     value={truck.driver}
                     onChange={onChange}
                     placeholder="Driver"
-                    className="border p-2 w-full rounded"
+                    className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
                   />,
                   <input
                     key="purpose"
@@ -85,14 +104,14 @@ export default function EditTruckModal({
                     value={truck.purpose}
                     onChange={onChange}
                     placeholder="Purpose"
-                    className="border p-2 w-full rounded"
+                    className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
                   />,
                   <select
                     key="bay"
                     name="bay"
                     value={truck.bay}
                     onChange={onChange}
-                    className="border p-2 w-full rounded"
+                    className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
                   >
                     <option value="">Select Bay</option>
                     {bays.map((b) => (
@@ -129,7 +148,7 @@ export default function EditTruckModal({
                     onClick={onClose}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 border rounded"
+                    className={`px-4 py-2 rounded ${theme.btnSecondary}`}
                   >
                     Cancel
                   </motion.button>
@@ -137,7 +156,7 @@ export default function EditTruckModal({
                     type="submit"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                    className={`px-4 py-2 rounded ${theme.btnPrimary}`}
                   >
                     Save
                   </motion.button>

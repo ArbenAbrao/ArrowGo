@@ -1,6 +1,7 @@
 // src/Components/Trucks/CompleteTrucksListModal.jsx
-import { Fragment, useState, useEffect } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { Dialog, Transition } from "@headlessui/react";
+import axios from "axios";
 import {
   TruckIcon,
   XMarkIcon,
@@ -9,49 +10,79 @@ import {
 } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+const tableRowVariants = {
+  hidden: { opacity: 0, y: -10 },
+  visible: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+};
 
 export default function CompleteTrucksListModal({
   open,
   onClose,
-  trucks,
+  trucks: initialTrucks,
   selectedClient,
   setSelectedClient,
-  filterDate,
-  setFilterDate,
   onExport,
+  darkMode = false,
 }) {
+  const [trucks, setTrucks] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "date", direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [dateRange, setDateRange] = useState([null, null]);
+  const [startDate, endDate] = dateRange;
 
   const ITEMS_PER_PAGE = 8;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedClient, filterDate, searchTerm]);
+  useEffect(() => setTrucks(initialTrucks), [initialTrucks]);
+  useEffect(() => setCurrentPage(1), [selectedClient, dateRange, searchTerm]);
 
-  let filtered = trucks
-    .filter((t) => (selectedClient ? t.clientName === selectedClient : true))
-    .filter((t) =>
-      filterDate
-        ? new Date(t.date).toDateString() === new Date(filterDate).toDateString()
-        : true
-    )
-    .filter((t) =>
-      `${t.clientName} ${t.truckType} ${t.plateNumber} ${t.bay} ${t.driver} ${t.purpose}`
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
-    );
+  const filtered = useMemo(() => {
+    let data = [...trucks];
 
-  if (sortConfig.key) {
-    filtered.sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key])
-        return sortConfig.direction === "asc" ? -1 : 1;
-      if (a[sortConfig.key] > b[sortConfig.key])
-        return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
-  }
+    if (selectedClient) {
+      const clientNormalized = selectedClient.trim().toLowerCase();
+      data = data.filter(
+        (t) => (t.clientName || "").trim().toLowerCase() === clientNormalized
+      );
+    }
+
+    if (startDate || endDate) {
+      data = data.filter((t) => {
+        if (!t.date) return false;
+        const truckDate = new Date(t.date);
+        if (startDate && truckDate < startDate) return false;
+        if (endDate && truckDate > endDate) return false;
+        return true;
+      });
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      data = data.filter((t) =>
+        `${t.clientName || ""} ${t.truckType || ""} ${t.plateNumber || ""} ${t.bay || ""} ${t.driver || ""} ${t.purpose || ""}`.toLowerCase().includes(term)
+      );
+    }
+
+    if (sortConfig.key) {
+      data.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+        if (sortConfig.key === "date" || sortConfig.key === "timeOutDate") {
+          valA = valA ? new Date(valA) : new Date(0);
+          valB = valB ? new Date(valB) : new Date(0);
+        }
+        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [trucks, selectedClient, startDate, endDate, searchTerm, sortConfig]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const data = filtered.slice(
@@ -66,37 +97,70 @@ export default function CompleteTrucksListModal({
     }));
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === data.length) setSelectedIds([]);
+    else setSelectedIds(data.map((t) => t.id));
+  };
+
+  const bulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!window.confirm(`Delete ${selectedIds.length} selected trucks?`)) return;
+    try {
+      await Promise.all(selectedIds.map((id) => axios.delete(`/api/trucks/${id}`)));
+      setTrucks((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
+      setSelectedIds([]);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error(err);
+      alert("Some trucks could not be deleted.");
+    }
+  };
+
   const highlight = (text) => {
-    if (!searchTerm) return text;
-    return text
-      .toString()
-      .split(new RegExp(`(${searchTerm})`, "gi"))
-      .map((part, i) =>
-        part.toLowerCase() === searchTerm.toLowerCase() ? (
-          <span key={i} className="bg-yellow-200 font-semibold">{part}</span>
-        ) : (
-          part
-        )
-      );
+    if (!searchTerm || !text) return text;
+    return text.toString().split(new RegExp(`(${searchTerm})`, "gi")).map((part, i) =>
+      part.toLowerCase() === searchTerm.toLowerCase() ? (
+        <span key={i} className="bg-yellow-400/30 font-semibold">{part}</span>
+      ) : part
+    );
   };
 
-  const tableRowVariants = {
-    hidden: { opacity: 0, y: -10 },
-    visible: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -10 },
-  };
-
-  const tableContainerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
-    exit: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: -1 } },
-  };
+  // ================= THEME =================
+  const theme = darkMode
+    ? {
+        modalBg: "bg-gray-900 text-gray-100",
+        headerBg: "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white",
+        filterBg: "bg-gray-800 text-gray-100",
+        tableHeader: "bg-gray-800 text-cyan-300 border-b border-cyan-400/40",
+        tableRowEven: "bg-gray-900",
+        tableRowOdd: "bg-gray-800",
+        rowHover: "hover:bg-cyan-500/10",
+        filterInput: "bg-gray-700 text-gray-100 border-gray-600 placeholder-gray-400 focus:ring-cyan-400 focus:border-cyan-400",
+        paginationActive: "bg-cyan-500 text-black shadow-[0_0_8px_cyan]",
+        paginationInactive: "hover:bg-gray-700 text-gray-300 border-gray-600",
+      }
+    : {
+        modalBg: "bg-white text-gray-900",
+        headerBg: "bg-gradient-to-r from-indigo-400 to-indigo-200 text-gray-900",
+        filterBg: "bg-gray-100 text-gray-900",
+        tableHeader: "bg-gray-100 text-gray-900 border-b border-gray-300",
+        tableRowEven: "bg-gray-50",
+        tableRowOdd: "bg-white",
+        rowHover: "hover:bg-indigo-50",
+        filterInput: "bg-white text-gray-900 border-gray-300 placeholder-gray-500 focus:ring-indigo-400 focus:border-indigo-400",
+        paginationActive: "bg-indigo-600 text-white shadow-[0_0_8px_indigo]",
+        paginationInactive: "hover:bg-gray-200 text-gray-900 border-gray-300",
+      };
 
   return (
     <Transition appear show={open} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
-
-        {/* Background overlay */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -109,7 +173,6 @@ export default function CompleteTrucksListModal({
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
         </Transition.Child>
 
-        {/* Modal panel */}
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <Transition.Child
             as={Fragment}
@@ -125,163 +188,158 @@ export default function CompleteTrucksListModal({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+              className={`w-full max-w-7xl rounded-3xl shadow-2xl overflow-hidden ${theme.modalBg}`}
             >
-
               {/* HEADER */}
-              <motion.div
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-                className="flex justify-between items-center px-6 py-4 bg-gradient-to-r from-indigo-600 to-indigo-400 text-white"
-              >
+              <div className={`flex justify-between items-center px-6 py-4 ${theme.headerBg}`}>
                 <div className="flex items-center gap-2">
                   <TruckIcon className="w-6 h-6" />
-                  <Dialog.Title className="text-xl font-semibold">
-                    Complete Trucks List
-                  </Dialog.Title>
+                  <Dialog.Title className="text-xl font-semibold">Complete Trucks List</Dialog.Title>
                 </div>
                 <button onClick={onClose} className="hover:text-gray-200">
                   <XMarkIcon className="w-6 h-6" />
                 </button>
-              </motion.div>
+              </div>
 
-              {/* FILTER BAR */}
-              <motion.div
-                initial={{ y: -10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.3 }}
-                className="sticky top-0 z-20 bg-white border-b px-6 py-4"
-              >
-                <div className="flex flex-wrap gap-3 items-center">
-                  <select
-                    value={selectedClient}
-                    onChange={(e) => setSelectedClient(e.target.value)}
-                    className="h-10 border px-3 rounded-lg text-black"
-                  >
-                    <option value="">All Clients</option>
-                    {[...new Set(trucks.map((t) => t.clientName))].map(
-                      (c, i) => (
-                        <option key={i} value={c}>{c}</option>
-                      )
-                    )}
-                  </select>
+              {/* FILTERS */}
+<motion.div
+  initial={{ y: -20, opacity: 0 }}
+  animate={{ y: 0, opacity: 1 }}
+  transition={{ delay: 0.15, duration: 0.4, type: "spring", stiffness: 120 }}
+  className={`flex flex-wrap gap-3 px-6 py-4 ${theme.filterBg}`}
+>
+  <select
+    value={selectedClient || ""}
+    onChange={(e) => setSelectedClient(e.target.value)}
+    className={`h-10 border px-3 rounded-lg transition-all duration-200 hover:shadow-[0_0_10px_cyan] hover:border-cyan-400 ${theme.filterInput}`}
+  >
+    <option value="">All Clients</option>
+    {[...new Set(trucks.map(t => t.clientName))].map((c, i) => (
+      <option key={i} value={c}>{c}</option>
+    ))}
+  </select>
 
-                  <DatePicker
-                    selected={filterDate}
-                    onChange={setFilterDate}
-                    placeholderText="Filter by date"
-                    dateFormat="MMM d, yyyy"
-                    className="border p-2 rounded text-gray-800"
-                  />
+  <DatePicker
+    selectsRange
+    startDate={startDate}
+    endDate={endDate}
+    onChange={(update) => setDateRange(update)}
+    isClearable
+    placeholderText="Select date range"
+    dateFormat="MM/dd/yyyy"
+    popperPlacement="bottom-start"
+    popperClassName="z-[9999]"
+    className={`h-10 border px-3 rounded-lg transition-all duration-200 hover:shadow-[0_0_10px_cyan] hover:border-cyan-400 ${theme.filterInput}`}
+  />
 
-                  <input
-                    className="h-10 border px-3 rounded-lg min-w-[260px]"
-                    placeholder="Search client, plate, driver..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+  <input
+    className={`h-10 border px-3 rounded-lg min-w-[260px] transition-all duration-200 hover:shadow-[0_0_10px_cyan] hover:border-cyan-400 ${theme.filterInput}`}
+    placeholder="Search client, plate, driver..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+  />
 
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25, duration: 0.3 }}
-                    className="ml-auto flex items-center gap-4"
-                  >
-                    <span className="text-sm text-gray-600">
-                      Total Records: <span className="font-semibold text-black">{filtered.length}</span>
-                    </span>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={onExport}
-                      className="h-10 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      Export CSV
-                    </motion.button>
-                  </motion.div>
-                </div>
-              </motion.div>
+  <div className="ml-auto flex gap-2">
+    {selectedIds.length > 0 && (
+      <motion.button
+        whileHover={{ scale: 1.05, boxShadow: "0 0 12px #f87171" }}
+        whileTap={{ scale: 0.95 }}
+        onClick={bulkDelete}
+        className="h-10 px-4 bg-red-600 text-white rounded-lg transition-all duration-200"
+      >
+        Delete ({selectedIds.length})
+      </motion.button>
+    )}
+    <motion.button
+      whileHover={{ scale: 1.05, boxShadow: "0 0 12px #34d399" }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onExport}
+      className="h-10 px-4 bg-green-600 text-white rounded-lg transition-all duration-200"
+    >
+      Export CSV
+    </motion.button>
+  </div>
+</motion.div>
+
 
               {/* TABLE */}
               <div className="overflow-x-auto max-h-[60vh]">
-                <motion.table
-                  className="w-full border text-black min-w-[1000px]"
-                  variants={tableContainerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                >
-                  <thead className="bg-gray-100 sticky top-0 z-10">
-                    <tr>
-                      {["Client","Type","Plate","Bay","Driver","Purpose","Date","In","Out"].map((h) => (
-                        <th
-                          key={h}
-                          onClick={() => handleSort(h.toLowerCase())}
-                          className="px-4 py-3 border cursor-pointer whitespace-nowrap"
-                        >
-                          <div className="flex items-center gap-1">
-                            {h}
-                            {sortConfig.key === h.toLowerCase() &&
-                              (sortConfig.direction === "asc" ? (
-                                <ArrowUpIcon className="w-4" />
-                              ) : (
-                                <ArrowDownIcon className="w-4" />
-                              ))}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
+                <table className="w-full min-w-[1000px] text-sm border">
+                 <thead className={`${theme.tableHeader}  top-0 z-10`}>
+  <tr>
+    <th className="px-4 py-3 border text-center">
+      <input
+        type="checkbox"
+        onChange={toggleSelectAll}
+        checked={selectedIds.length === data.length && data.length > 0}
+      />
+    </th>
+    {["Client","Type","Plate","Bay","Driver","Purpose","Date","In","Out","Out Date"].map((h) => (
+      <th
+        key={h}
+        onClick={() => handleSort(h.toLowerCase().replace(/\s+/g, ""))}
+        className="px-4 py-3 border cursor-pointer whitespace-nowrap
+                   transition-colors duration-200 hover:text-cyan-400 hover:shadow-[0_0_8px_cyan]"
+      >
+        <div className="flex items-center gap-1">
+          {h}
+          {sortConfig.key === h.toLowerCase().replace(/\s+/g, "") &&
+            (sortConfig.direction === "asc" ? <ArrowUpIcon className="w-4" /> : <ArrowDownIcon className="w-4" />)}
+        </div>
+      </th>
+    ))}
+  </tr>
+</thead>
                   <AnimatePresence>
-                    <tbody>
-                      {data.map((t, index) => (
-                        <motion.tr
-                          key={index}
-                          variants={tableRowVariants}
-                          className="even:bg-gray-50 hover:bg-indigo-50"
-                        >
-                          <td className="p-3 border">{highlight(t.clientName)}</td>
-                          <td className="p-3 border">{highlight(t.truckType)}</td>
-                          <td className="p-3 border">{highlight(t.plateNumber)}</td>
-                          <td className="p-3 border">{highlight(t.bay)}</td>
-                          <td className="p-3 border">{highlight(t.driver)}</td>
-                          <td className="p-3 border">{highlight(t.purpose)}</td>
-                          <td className="p-3 border">{new Date(t.date).toLocaleDateString()}</td>
-                          <td className="p-3 border">{t.timeIn}</td>
-                          <td className="p-3 border">{t.timeOut || "-"}</td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
+                   <tbody>
+  {data.map((t, i) => (
+    <motion.tr
+      key={i}
+      variants={tableRowVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className={`${i % 2 === 0 ? theme.tableRowEven : theme.tableRowOdd} 
+                 ${theme.rowHover} transition-shadow duration-200 hover:shadow-[0_0_8px_cyan/40]`}
+    >
+      <td className="p-3 border text-center">
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(t.id)}
+          onChange={() => toggleSelect(t.id)}
+        />
+      </td>
+      <td className="p-3 border">{highlight(t.clientName)}</td>
+      <td className="p-3 border">{highlight(t.truckType)}</td>
+      <td className="p-3 border">{highlight(t.plateNumber)}</td>
+      <td className="p-3 border">{highlight(t.bay)}</td>
+      <td className="p-3 border">{highlight(t.driver)}</td>
+      <td className="p-3 border">{highlight(t.purpose)}</td>
+      <td className="p-3 border">{t.date ? new Date(t.date).toLocaleDateString() : "-"}</td>
+      <td className="p-3 border">{t.timeIn || "-"}</td>
+      <td className="p-3 border">{t.timeOut || "-"}</td>
+      <td className="p-3 border">{t.timeOutDate ? new Date(t.timeOutDate).toLocaleDateString() : "-"}</td>
+    </motion.tr>
+  ))}
+</tbody>
                   </AnimatePresence>
-                </motion.table>
+                </table>
               </div>
 
               {/* PAGINATION */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ delay: 0.35, duration: 0.3 }}
-                className="sticky bottom-0 bg-white border-t py-3 flex justify-center gap-2"
-              >
+              <div className="sticky bottom-0 bg-opacity-90 border-t py-3 flex justify-center gap-2">
                 {[...Array(totalPages)].map((_, i) => (
-                  <motion.button
+                  <button
                     key={i}
                     onClick={() => setCurrentPage(i + 1)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
                     className={`px-3 py-1 rounded-lg border ${
-                      currentPage === i + 1
-                        ? "bg-indigo-600 text-white"
-                        : "hover:bg-gray-200"
+                      currentPage === i + 1 ? theme.paginationActive : theme.paginationInactive
                     }`}
                   >
                     {i + 1}
-                  </motion.button>
+                  </button>
                 ))}
-              </motion.div>
-
+              </div>
             </motion.div>
           </Transition.Child>
         </div>
