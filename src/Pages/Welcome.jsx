@@ -1,9 +1,9 @@
-// src/Pages/Welcome.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginModal from "../Components/Modals/LoginModal";
+import { useToast } from "../Context/ToastContext";
 
-// Sections
+/* Sections */
 import HeaderSec from "../Components/Sections/headerSec";
 import FooterSec from "../Components/Sections/footerSec";
 import Hero from "../Components/Sections/Hero";
@@ -13,38 +13,36 @@ import Divider from "../Components/Sections/Divider";
 import Request from "../Components/Sections/Request";
 import About from "../Components/Sections/about";
 
-// Icons
+/* Icons */
 import { FaWarehouse, FaTruck, FaBoxOpen } from "react-icons/fa";
 import { AiOutlineGlobal } from "react-icons/ai";
 import { MdOutlineInventory, MdOutlineLocalShipping } from "react-icons/md";
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
 
   const rotatingWords = ["Create", "Build", "Develop"];
 
-  // ✅ FIXED: dependency added
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentWordIndex(
-        (prev) => (prev + 1) % rotatingWords.length
-      );
+      setCurrentWordIndex((prev) => (prev + 1) % rotatingWords.length);
     }, 2000);
-
     return () => clearInterval(interval);
   }, [rotatingWords.length]);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-    if (isLoggedIn) navigate("/dashboard", { replace: true });
+    if (localStorage.getItem("isLoggedIn") === "true") {
+      navigate("/dashboard", { replace: true });
+    }
   }, [navigate]);
 
   useEffect(() => {
@@ -55,21 +53,46 @@ export default function Welcome() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    if (email === "Admin" && password === "Admin123") {
-      localStorage.setItem("isLoggedIn", "true");
-      setIsModalOpen(false);
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usernameOrEmail: email, password }),
+      });
 
-      if (redirectAfterLogin) {
-        window.open(redirectAfterLogin, "_blank");
-        setRedirectAfterLogin(null);
-      } else {
-        navigate("/dashboard", { replace: true });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          showToast("Incorrect username/email or password.", "error");
+        } else if (response.status === 403) {
+          showToast("Your account is disabled. Contact admin.", "error");
+        } else {
+          showToast(data.message || "Login failed. Try again.", "error");
+        }
+        setLoading(false);
+        return;
       }
-    } else {
-      setError("Invalid email or password");
+
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      setIsModalOpen(false);
+      showToast("Login successful!", "success");
+
+      redirectAfterLogin
+        ? window.open(redirectAfterLogin, "_blank")
+        : navigate("/dashboard", { replace: true });
+
+      setRedirectAfterLogin(null);
+    } catch {
+      showToast("Server error. Please try again later.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,33 +150,19 @@ export default function Welcome() {
 
       <Hero />
       <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
-      <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
-
       <About />
-
       <Request
         onLoginClick={(path) => {
           setRedirectAfterLogin(path);
           setIsModalOpen(true);
         }}
       />
-
-      <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
-      <Divider gradient="bg-gradient-to-r from-green-400 via-blue-400 to-purple-500" />
-
       <Services services={services} />
-
-      <Divider gradient="bg-gradient-to-r from-purple-500 via-pink-400 to-red-400" />
-      <Divider gradient="bg-gradient-to-r from-purple-500 via-pink-400 to-red-400" />
 
       <ArrowGoInfo
         rotatingWords={rotatingWords}
         currentWordIndex={currentWordIndex}
       />
-
-      <Divider gradient="bg-gradient-to-r from-blue-400 via-green-400 to-yellow-400" />
-      <Divider gradient="bg-gradient-to-r from-blue-400 via-green-400 to-yellow-400" />
-
       <FooterSec />
 
       <LoginModal
@@ -164,8 +173,7 @@ export default function Welcome() {
         setEmail={setEmail}
         password={password}
         setPassword={setPassword}
-        error={error}
-        message="Please log in to continue"
+        loading={loading}
       />
     </div>
   );

@@ -38,6 +38,7 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
     setViewTruck(truck);
     setViewOpen(true);
   };
+const [selectedBranch, setSelectedBranch] = useState("");
 
   /* ================= FETCH TRUCKS ================= */
   useEffect(() => {
@@ -50,48 +51,57 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
 
   /* ================= FILTER ================= */
   const filtered = useMemo(() => {
-    let data = [...trucks];
+  let data = [...trucks];
 
-    if (selectedClient) {
-      const clientNormalized = selectedClient.trim().toLowerCase();
-      data = data.filter(
-        (t) => (t.clientName || "").trim().toLowerCase() === clientNormalized
-      );
-    }
+  if (selectedClient) {
+    data = data.filter(
+      (t) =>
+        (t.clientName || "").toLowerCase() ===
+        selectedClient.toLowerCase()
+    );
+  }
 
-    if (startDate || endDate) {
-      data = data.filter((t) => {
-        if (!t.date) return false;
-        const truckDate = new Date(t.date);
-        if (startDate && truckDate < startDate) return false;
-        if (endDate && truckDate > endDate) return false;
-        return true;
-      });
-    }
+  // ✅ BRANCH FILTER
+  if (selectedBranch) {
+    data = data.filter(
+      (t) =>
+        (t.branchRegistered || "").toLowerCase() ===
+        selectedBranch.toLowerCase()
+    );
+  }
 
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      data = data.filter((t) =>
-        `${t.id} ${t.clientName || ""} ${t.truckType || ""} ${t.plateNumber || ""}`.toLowerCase().includes(term)
-      );
-    }
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    data = data.filter((t) =>
+      `
+      ${t.id}
+      ${t.clientName}
+      ${t.branchRegistered}
+      ${t.truckType}
+      ${t.plateNumber}
+      ${t.brandName}
+      ${t.model}
+      ${t.fuelType}
+      ${t.displacement}
+      ${t.payloadCapacity}
+      `
+        .toLowerCase()
+        .includes(term)
+    );
+  }
 
-    if (sortConfig.key) {
-      data.sort((a, b) => {
-        let valA = a[sortConfig.key];
-        let valB = b[sortConfig.key];
-        if (sortConfig.key === "date" || sortConfig.key === "timeOutDate") {
-          valA = valA ? new Date(valA) : new Date(0);
-          valB = valB ? new Date(valB) : new Date(0);
-        }
-        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
+  if (sortConfig.key) {
+    data.sort((a, b) => {
+      const A = a[sortConfig.key] || "";
+      const B = b[sortConfig.key] || "";
+      if (A < B) return sortConfig.direction === "asc" ? -1 : 1;
+      if (A > B) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
 
-    return data;
-  }, [trucks, selectedClient, startDate, endDate, searchTerm, sortConfig]);
+  return data;
+}, [trucks, selectedClient, selectedBranch, searchTerm, sortConfig]);
 
   /* ================= PAGINATION ================= */
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -100,7 +110,7 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
     currentPage * ITEMS_PER_PAGE
   );
 
-  useEffect(() => setCurrentPage(1), [selectedClient, searchTerm, dateRange]);
+useEffect(() => setCurrentPage(1), [selectedClient, selectedBranch, searchTerm, dateRange]);
 
   /* ================= SORT HANDLER ================= */
   const handleSort = (key) => {
@@ -153,10 +163,20 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
   /* ================= CSV EXPORT ================= */
   const exportCSV = () => {
     const csv =
-      "ID,Client Name,Truck Type,Plate Number,Date,Time In,Time Out,Time Out Date\n" +
+      "ID,Client Name,Branch,Truck Type,Plate Number,Brand,Model,Fuel,Displacement,Payload\n" +
       filtered
-        .map((t) =>
-          `${t.id},${t.clientName},${t.truckType},${t.plateNumber},${t.date || ""},${t.timeIn || ""},${t.timeOut || ""},${t.timeOutDate || ""}`
+        .map(
+          (t) =>
+            `${t.id},
+${t.clientName},
+${t.branchRegistered || ""},
+${t.truckType},
+${t.plateNumber},
+${t.brandName || ""},
+${t.model || ""},
+${t.fuelType || ""},
+${t.displacement || ""},
+${t.payloadCapacity || ""}`
         )
         .join("\n");
 
@@ -171,11 +191,18 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
   /* ================= HIGHLIGHT SEARCH ================= */
   const highlight = (text) => {
     if (!searchTerm || !text) return text;
-    return text.toString().split(new RegExp(`(${searchTerm})`, "gi")).map((part, i) =>
-      part.toLowerCase() === searchTerm.toLowerCase() ? (
-        <span key={i} className="bg-yellow-400/30 font-semibold">{part}</span>
-      ) : part
-    );
+    return text
+      .toString()
+      .split(new RegExp(`(${searchTerm})`, "gi"))
+      .map((part, i) =>
+        part.toLowerCase() === searchTerm.toLowerCase() ? (
+          <span key={i} className="bg-yellow-400/30 font-semibold">
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      );
   };
 
   /* ================= THEME ================= */
@@ -266,6 +293,18 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
     ))}
   </select>
 
+  <select
+  value={selectedBranch || ""}
+  onChange={(e) => setSelectedBranch(e.target.value)}
+  className={`h-10 border px-3 rounded-lg transition-all duration-200 hover:shadow-[0_0_10px_cyan] hover:border-cyan-400 ${theme.filterInput}`}
+>
+  <option value="">All Branches</option>
+  {[...new Set(trucks.map(t => t.branchRegistered).filter(Boolean))].map((b, i) => (
+    <option key={i} value={b}>{b}</option>
+  ))}
+</select>
+
+
   <DatePicker
     selectsRange
     startDate={startDate}
@@ -311,7 +350,7 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
                   {/* TABLE */}
                   <div className="overflow-x-auto max-h-[420px]">
                     <table className="w-full min-w-[900px] text-sm border">
-                      <thead className={`${theme.tableHeader} sticky top-0 z-10`}>
+                      <thead className={`${theme.tableHeader} top-0 z-10`}>
                         <tr>
                           <th className="px-3 py-2 border text-center">
                             <input
@@ -320,7 +359,21 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
                               checked={selectedIds.length === data.length && data.length > 0}
                             />
                           </th>
-                          {["ID","Client","Type","Plate","QR","Action"].map((h) => (
+                          {[
+  "ID",
+  "Client",
+  "Branch",
+  "Type",
+  "Plate",
+  "Brand",
+  "Model",
+  "Engine Type",
+  "Displacement",
+  "Payload",
+  "QR",
+  "Action",
+].map((h) => (
+
                             <th
                               key={h}
                               onClick={() => handleSort(h.toLowerCase().replace(/\s+/g, ""))}
@@ -354,9 +407,16 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
                                 />
                               </td>
                               <td className="border p-2">{highlight(t.id)}</td>
-                              <td className="border p-2">{highlight(t.clientName)}</td>
-                              <td className="border p-2">{highlight(t.truckType)}</td>
-                              <td className="border p-2">{highlight(t.plateNumber)}</td>
+<td className="border p-2">{highlight(t.clientName)}</td>
+<td className="border p-2">{highlight(t.branchRegistered)}</td>
+<td className="border p-2">{highlight(t.truckType)}</td>
+<td className="border p-2">{highlight(t.plateNumber)}</td>
+<td className="border p-2">{highlight(t.brandName)}</td>
+<td className="border p-2">{highlight(t.model)}</td>
+<td className="border p-2">{highlight(t.fuelType)}</td>
+<td className="border p-2">{highlight(t.displacement)}</td>
+<td className="border p-2">{highlight(t.payloadCapacity)}</td>
+
                               <td className="border p-2 text-center">
                                 <img
                                   src={`/api/clients/${t.id}/qrcode`}
@@ -378,29 +438,61 @@ export default function RegisteredTrucksModal({ open, onClose, darkMode = false 
                   </div>
 
                   {/* PAGINATION */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                    className="sticky bottom-0 z-20 bg-opacity-90 border-t py-3 flex justify-center gap-2 flex-wrap shadow-inner"
-                  >
-                    {[...Array(totalPages)].map((_, i) => (
-                      <motion.button
-                        key={i}
-                        onClick={() => setCurrentPage(i + 1)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`px-3 py-1 border rounded-lg ${
-                          currentPage === i + 1
-                            ? theme.paginationActive
-                            : theme.paginationInactive
-                        } transition`}
-                      >
-                        {i + 1}
-                      </motion.button>
-                    ))}
-                  </motion.div>
+<motion.div
+  initial={{ opacity: 0, y: 8 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: 8 }}
+  transition={{ duration: 0.25 }}
+  className={`sticky bottom-0 z-20 border-t px-6 py-3 flex items-center justify-between ${
+    darkMode ? "bg-gray-900/90" : "bg-white/90"
+  } backdrop-blur`}
+>
+  {/* Page Info */}
+  <span className="text-sm opacity-70">
+    Page <span className="font-semibold">{currentPage}</span> of{" "}
+    <span className="font-semibold">{totalPages || 1}</span>
+  </span>
+
+  {/* Controls */}
+  <div className="flex items-center gap-2">
+    {/* PREV */}
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      disabled={currentPage === 1}
+      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+      className={`px-4 py-1.5 rounded-full border text-sm transition
+        ${
+          currentPage === 1
+            ? "opacity-40 cursor-not-allowed"
+            : darkMode
+            ? "hover:bg-gray-700"
+            : "hover:bg-gray-100"
+        }`}
+    >
+      Prev
+    </motion.button>
+
+    {/* NEXT */}
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      disabled={currentPage === totalPages || totalPages === 0}
+      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+      className={`px-4 py-1.5 rounded-full border text-sm transition
+        ${
+          currentPage === totalPages || totalPages === 0
+            ? "opacity-40 cursor-not-allowed"
+            : darkMode
+            ? "hover:bg-gray-700"
+            : "hover:bg-gray-100"
+        }`}
+    >
+      Next
+    </motion.button>
+  </div>
+</motion.div>
+
                 </motion.div>
               )}
             </AnimatePresence>

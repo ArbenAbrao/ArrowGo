@@ -4,39 +4,52 @@ import { Dialog, Transition } from "@headlessui/react";
 import { motion } from "framer-motion";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
-export default function LoginModal({ isOpen, onClose, onLogin, email, setEmail, password, setPassword, error, message }) {
+export default function LoginModal({
+  isOpen,
+  onClose,
+  onLogin,
+  email,
+  setEmail,
+  password,
+  setPassword,
+  error,
+  message,
+  loading, // 🔥 new prop
+}) {
+
   const [showPassword, setShowPassword] = useState(false);
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+    visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 16 },
     visible: { opacity: 1, y: 0 },
   };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
-        {/* Blurred overlay */}
+
+        {/* Overlay */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-500"
-          enterFrom="opacity-0 backdrop-blur-none"
-          enterTo="opacity-100 backdrop-blur-sm"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
           leave="ease-in duration-300"
-          leaveFrom="opacity-100 backdrop-blur-sm"
-          leaveTo="opacity-0 backdrop-blur-none"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm" />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
         </Transition.Child>
 
-        {/* Modal */}
+        {/* Modal Wrapper */}
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
+          <div className="flex min-h-[100svh] items-center justify-center p-4">
+
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-400"
@@ -47,30 +60,46 @@ export default function LoginModal({ isOpen, onClose, onLogin, email, setEmail, 
               leaveTo="opacity-0 scale-95"
             >
               <motion.div
-                className="w-full max-w-md p-8 bg-white rounded-3xl shadow-2xl relative"
+                className="
+                  w-full 
+                  max-w-sm sm:max-w-md
+                  bg-white 
+                  rounded-3xl 
+                  shadow-2xl 
+                  p-6 sm:p-8
+                "
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
                 variants={containerVariants}
               >
+
                 {/* Logo */}
                 <motion.div
-                  className="flex justify-center mb-6"
+                  className="flex justify-center mb-5"
                   variants={itemVariants}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 120, damping: 12 }}
                 >
                   <img
-                    src="/logo5.png"
+                    src="/logo9.png"
                     alt="Logo"
-                    className="h-44 w-44 object-contain"
+                    className="
+                      h-24 
+                      sm:h-32 
+                      md:h-40 
+                      object-contain
+                    "
                   />
                 </motion.div>
 
                 {/* Title */}
                 <motion.h2
-                  className="text-3xl font-bold mb-3 text-gray-800 text-center"
+                  className="
+                    text-2xl sm:text-3xl 
+                    font-bold 
+                    mb-3 
+                    text-gray-800 
+                    text-center
+                  "
                   variants={itemVariants}
                 >
                   Welcome Back
@@ -78,7 +107,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, email, setEmail, 
 
                 {message && (
                   <motion.p
-                    className="text-gray-500 mb-4 text-center font-medium"
+                    className="text-gray-500 mb-4 text-center text-sm sm:text-base font-medium"
                     variants={itemVariants}
                   >
                     {message}
@@ -91,46 +120,127 @@ export default function LoginModal({ isOpen, onClose, onLogin, email, setEmail, 
                   className="flex flex-col gap-4"
                   variants={itemVariants}
                 >
-                  <motion.input
-                    type="text"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 shadow-sm text-gray-800 font-medium placeholder-gray-400 transition"
-                    variants={itemVariants}
-                  />
+                  <input
+  type="text"
+  placeholder="Email or Username"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  required
+className="
+  border border-gray-300 
+  rounded-xl 
+  px-4 py-3 
+  text-sm sm:text-base
+  text-black
+  placeholder-gray-400
+  focus:outline-none 
+  focus:ring-2 focus:ring-blue-400
+  transition
+"
+/>
 
-                  {/* Password with toggle */}
-                  <motion.div className="relative" variants={itemVariants}>
+
+                  {/* Password */}
+                  <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 shadow-sm text-gray-800 font-medium placeholder-gray-400 transition"
+                      className="
+  w-full 
+  border border-gray-300 
+  rounded-xl 
+  px-4 py-3 pr-12 
+  text-sm sm:text-base
+  text-black
+  placeholder-gray-400
+  focus:outline-none 
+  focus:ring-2 focus:ring-blue-400
+  transition
+"
+
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                     >
-                      {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                      {showPassword ? (
+                        <EyeSlashIcon className="w-5 h-5" />
+                      ) : (
+                        <EyeIcon className="w-5 h-5" />
+                      )}
                     </button>
-                  </motion.div>
+                  </div>
 
-                  {error && <motion.p className="text-red-500 text-sm text-center" variants={itemVariants}>{error}</motion.p>}
+                  {error && (
+  <motion.div
+    variants={itemVariants}
+    className="
+      bg-red-50 
+      border border-red-400 
+      text-red-700 
+      px-4 py-3 
+      rounded-xl 
+      text-sm 
+      text-center
+      font-medium
+      shadow-sm
+    "
+  >
+    ⚠ {error}
+  </motion.div>
+)}
+
+
 
                   <motion.button
-                    type="submit"
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-blue-600 text-white px-5 py-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition-all duration-300"
-                    variants={itemVariants}
-                  >
-                    Log In
-                  </motion.button>
+  type="submit"
+  whileHover={{ scale: loading ? 1 : 1.05 }}
+  whileTap={{ scale: loading ? 1 : 0.95 }}
+  className={`
+    bg-blue-600 
+    text-white 
+    py-3 
+    rounded-xl 
+    font-semibold 
+    text-sm sm:text-base
+    hover:bg-blue-700 
+    transition
+    flex items-center justify-center
+    ${loading ? "cursor-not-allowed opacity-70" : ""}
+  `}
+  variants={itemVariants}
+  disabled={loading} // 🔥 disable while loading
+>
+  {loading ? (
+    <svg
+      className="animate-spin h-5 w-5 text-white"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      ></circle>
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8H4z"
+      ></path>
+    </svg>
+  ) : (
+    "Log In"
+  )}
+</motion.button>
+
                 </motion.form>
 
                 <motion.button
@@ -140,8 +250,10 @@ export default function LoginModal({ isOpen, onClose, onLogin, email, setEmail, 
                 >
                   Cancel
                 </motion.button>
+
               </motion.div>
             </Transition.Child>
+
           </div>
         </div>
       </Dialog>

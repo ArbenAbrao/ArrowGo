@@ -39,4 +39,48 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.post("/register-truck", async (req, res) => {
+  try {
+    const {
+      plate_number,
+      truck_type,
+      client_name,
+      brand_name,
+      model,
+      fuel_type,
+      displacement,
+      payload_capacity,
+      branch,
+    } = req.body;
+
+    const timestamp = new Date();
+
+    const [result] = await db.query(
+      `INSERT INTO \`register-truck\`
+      (plate_number, truck_type, client_name, brand_name, model, fuel_type, displacement, payload_capacity, branch, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        plate_number,
+        truck_type,
+        client_name,
+        brand_name,
+        model,
+        fuel_type,
+        displacement,
+        payload_capacity,
+        branch,
+        timestamp,
+      ]
+    );
+
+    res.status(201).json({
+      id: result.insertId,
+      message: "Truck registered successfully",
+    });
+  } catch (err) {
+    console.error("Failed to register truck:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

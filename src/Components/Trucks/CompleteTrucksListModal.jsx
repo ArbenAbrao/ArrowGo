@@ -194,7 +194,7 @@ export default function CompleteTrucksListModal({
               <div className={`flex justify-between items-center px-6 py-4 ${theme.headerBg}`}>
                 <div className="flex items-center gap-2">
                   <TruckIcon className="w-6 h-6" />
-                  <Dialog.Title className="text-xl font-semibold">Complete Trucks List</Dialog.Title>
+                  <Dialog.Title className="text-xl font-semibold">Vehicle List</Dialog.Title>
                 </div>
                 <button onClick={onClose} className="hover:text-gray-200">
                   <XMarkIcon className="w-6 h-6" />
@@ -327,19 +327,61 @@ export default function CompleteTrucksListModal({
               </div>
 
               {/* PAGINATION */}
-              <div className="sticky bottom-0 bg-opacity-90 border-t py-3 flex justify-center gap-2">
-                {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`px-3 py-1 rounded-lg border ${
-                      currentPage === i + 1 ? theme.paginationActive : theme.paginationInactive
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
+             {/* PAGINATION */}
+<motion.div
+  initial={{ opacity: 0, y: 8 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: 8 }}
+  transition={{ duration: 0.25 }}
+  className={`sticky bottom-0 z-20 border-t px-6 py-3 flex items-center justify-between ${
+    darkMode ? "bg-gray-900/90" : "bg-white/90"
+  } backdrop-blur`}
+>
+  {/* Page Info */}
+  <span className="text-sm opacity-70">
+    Page <span className="font-semibold">{currentPage}</span> of{" "}
+    <span className="font-semibold">{totalPages || 1}</span>
+  </span>
+
+  {/* Controls */}
+  <div className="flex items-center gap-2">
+    {/* PREV */}
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      disabled={currentPage === 1}
+      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+      className={`px-4 py-1.5 rounded-full border text-sm transition
+        ${
+          currentPage === 1
+            ? "opacity-40 cursor-not-allowed"
+            : darkMode
+            ? "hover:bg-gray-700"
+            : "hover:bg-gray-100"
+        }`}
+    >
+      Prev
+    </motion.button>
+
+    {/* NEXT */}
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      disabled={currentPage === totalPages || totalPages === 0}
+      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+      className={`px-4 py-1.5 rounded-full border text-sm transition
+        ${
+          currentPage === totalPages || totalPages === 0
+            ? "opacity-40 cursor-not-allowed"
+            : darkMode
+            ? "hover:bg-gray-700"
+            : "hover:bg-gray-100"
+        }`}
+    >
+      Next
+    </motion.button>
+  </div>
+</motion.div>
             </motion.div>
           </Transition.Child>
         </div>

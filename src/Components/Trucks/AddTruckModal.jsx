@@ -102,102 +102,162 @@ export default function AddTruckModal({
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
-                  {/* Client Dropdown */}
-                  <motion.div
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: 0.05 }}
-                    className="relative"
-                  >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDropdownOpen(dropdownOpen === "client" ? null : "client")
-                      }
-                      className={`w-full border p-2 rounded text-left flex justify-between items-center ${theme.inputBg} ${theme.neonGlow}`}
-                    >
-                      {form.clientName || "Select Client"}
-                      <ChevronDownIcon
-                        className={`w-5 h-5 ml-2 transition-transform ${dropdownOpen === "client" ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    <AnimatePresence>
-                      {dropdownOpen === "client" && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className={`absolute z-50 w-full rounded shadow-lg mt-1 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto ${theme.dropdownBg}`}
-                        >
-                          {[...new Set(clients.map(c => c.clientName))].map((c, i) => (
-                            <span
-                              key={i}
-                              className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
-                              onClick={() => {
-                                onChange({ target: { name: "clientName", value: c } });
-                                setDropdownOpen(null);
-                              }}
-                            >
-                              {c}
-                            </span>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
+              
+<motion.div
+  variants={inputVariants}
+  initial="hidden"
+  animate="visible"
+  transition={{ delay: 0 }}
+  className="relative"
+>
+  <button
+    type="button"
+    onClick={() =>
+      setDropdownOpen(dropdownOpen === "branch" ? null : "branch")
+    }
+    className={`w-full border p-2 rounded text-left flex justify-between items-center ${theme.inputBg} ${theme.neonGlow}`}
+  >
+    {form.branchRegistered || "Select Branch"}
+    <ChevronDownIcon
+      className={`w-5 h-5 ml-2 transition-transform ${
+        dropdownOpen === "branch" ? "rotate-180" : ""
+      }`}
+    />
+  </button>
+  <AnimatePresence>
+    {dropdownOpen === "branch" && (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className={`absolute z-50 w-full rounded shadow-lg mt-1 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto ${theme.dropdownBg}`}
+      >
+        {[...new Set(clients.map(c => c.branchRegistered))].map((b, i) => (
+          <span
+            key={i}
+            className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
+            onClick={() => {
+              onChange({ target: { name: "branchRegistered", value: b } });
+              onChange({ target: { name: "clientName", value: "" } }); // Reset client
+              setDropdownOpen(null);
+            }}
+          >
+            {b}
+          </span>
+        ))}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
 
-                  {/* Truck ID Dropdown */}
-                  <motion.div
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: 0.1 }}
-                    className="relative"
-                  >
-                    <button
-                      type="button"
-                      disabled={!form.clientName}
-                      onClick={() =>
-                        setDropdownOpen(dropdownOpen === "truckId" ? null : "truckId")
-                      }
-                      className={`w-full border p-2 rounded text-left flex justify-between items-center disabled:opacity-50 ${theme.inputBg} ${theme.neonGlow}`}
-                    >
-                      {form.id || "Select Truck ID"}
-                      <ChevronDownIcon
-                        className={`w-5 h-5 ml-2 transition-transform ${dropdownOpen === "truckId" ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    <AnimatePresence>
-                      {dropdownOpen === "truckId" && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className={`absolute z-50 w-full rounded shadow-lg mt-1 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto ${theme.dropdownBg}`}
-                        >
-                          {clients
-                            .filter(c => c.clientName === form.clientName)
-                            .map((truck, i) => (
-                              <span
-                                key={i}
-                                className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
-                                onClick={() => {
-                                  onChange({ target: { name: "id", value: truck.id } });
-                                  onChange({ target: { name: "truckType", value: truck.truckType } });
-                                  onChange({ target: { name: "plateNumber", value: truck.plateNumber } });
-                                  setDropdownOpen(null);
-                                }}
-                              >
-                                {truck.id}
-                              </span>
-                            ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
+{/* Client Dropdown */}
+<motion.div
+  variants={inputVariants}
+  initial="hidden"
+  animate="visible"
+  transition={{ delay: 0.05 }}
+  className="relative"
+>
+  <button
+    type="button"
+    disabled={!form.branchRegistered}
+    onClick={() =>
+      setDropdownOpen(dropdownOpen === "client" ? null : "client")
+    }
+    className={`w-full border p-2 rounded text-left flex justify-between items-center disabled:opacity-50 ${theme.inputBg} ${theme.neonGlow}`}
+  >
+    {form.clientName || "Select Client"}
+    <ChevronDownIcon
+      className={`w-5 h-5 ml-2 transition-transform ${
+        dropdownOpen === "client" ? "rotate-180" : ""
+      }`}
+    />
+  </button>
+  <AnimatePresence>
+    {dropdownOpen === "client" && (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className={`absolute z-50 w-full rounded shadow-lg mt-1 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto ${theme.dropdownBg}`}
+      >
+        {[...new Set(clients
+          .filter(c => c.branchRegistered === form.branchRegistered)
+          .map(c => c.clientName))].map((clientName, i) => (
+          <span
+            key={i}
+            className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
+            onClick={() => {
+              onChange({ target: { name: "clientName", value: clientName } });
+              setDropdownOpen(null);
+            }}
+          >
+            {clientName}
+          </span>
+        ))}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
+
+                {/* Truck ID Dropdown */}
+<motion.div
+  variants={inputVariants}
+  initial="hidden"
+  animate="visible"
+  transition={{ delay: 0.1 }}
+  className="relative"
+>
+  <button
+    type="button"
+    disabled={!form.clientName || !form.branchRegistered}
+    onClick={() =>
+      setDropdownOpen(dropdownOpen === "truckId" ? null : "truckId")
+    }
+    className={`w-full border p-2 rounded text-left flex justify-between items-center disabled:opacity-50 ${theme.inputBg} ${theme.neonGlow}`}
+  >
+    {form.id || "Select Truck ID"}
+    <ChevronDownIcon
+      className={`w-5 h-5 ml-2 transition-transform ${dropdownOpen === "truckId" ? "rotate-180" : ""}`}
+    />
+  </button>
+  <AnimatePresence>
+    {dropdownOpen === "truckId" && (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className={`absolute z-50 w-full rounded shadow-lg mt-1 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto ${theme.dropdownBg}`}
+      >
+        {clients
+          .filter(
+            c =>
+              c.clientName === form.clientName &&
+              c.branchRegistered === form.branchRegistered
+          )
+          .map((truck, i) => (
+            <span
+              key={i}
+              className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
+              onClick={() => {
+                onChange({ target: { name: "id", value: truck.id } });
+                onChange({ target: { name: "truckType", value: truck.truckType } });
+                onChange({ target: { name: "plateNumber", value: truck.plateNumber } });
+                onChange({ target: { name: "branchRegistered", value: truck.branchRegistered } });
+                setDropdownOpen(null);
+              }}
+            >
+              {truck.id}
+            </span>
+          ))}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
+
 
                   {/* Truck Type */}
                   <motion.input
@@ -222,6 +282,8 @@ export default function AddTruckModal({
                     placeholder="Plate Number"
                     className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
                   />
+              
+
 
                   {/* Bay Dropdown */}
                   <motion.div

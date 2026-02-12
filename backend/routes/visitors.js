@@ -1,49 +1,91 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const { dbPromise } = require("../db"); // ✅ use promise-based DB
 
-// ---------- GET all visitors ----------
-router.get("/", (req, res) => {
-  const sql = "SELECT * FROM visitors ORDER BY date DESC, timeIn DESC";
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json(err);
-    res.json(results);
-  });
+/* ==================== GET ALL VISITORS ==================== */
+router.get("/", async (req, res) => {
+  try {
+    const [visitors] = await dbPromise.query(
+      "SELECT * FROM visitors ORDER BY date DESC, timeIn DESC"
+    );
+    res.json(visitors);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch visitors" });
+  }
 });
 
-// ---------- ADD a visitor ----------
-router.post("/add", (req, res) => {
+/* ==================== ADD A VISITOR ==================== */
+router.post("/add", async (req, res) => {
   const visitor = {
-    ...req.body,
-    appointmentRequest: req.body.appointmentRequest ? 1 : 0, // ensure it's 0 or 1
+    visitorName: req.body.visitorName,
+    company: req.body.company,
+    personToVisit: req.body.personToVisit,
+    purpose: req.body.purpose,
+    idType: req.body.idType,
+    idNumber: req.body.idNumber,
+    badgeNumber: req.body.badgeNumber,
+    branch: req.body.branch || "",
+    vehicleMode: req.body.vehicleMode,
+    vehicleDetails: req.body.vehicleDetails,
+    date: req.body.date,
+    timeIn: req.body.timeIn || "",
+    timeOut: req.body.timeOut || "",
+    appointmentRequest: req.body.appointmentRequest ? 1 : 0,
   };
 
-  const sql = "INSERT INTO visitors SET ?";
-  db.query(sql, visitor, (err, result) => {
-    if (err) return res.status(500).json(err);
+  try {
+    const [result] = await dbPromise.query("INSERT INTO visitors SET ?", [visitor]);
     res.json({ id: result.insertId, ...visitor });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to add visitor" });
+  }
 });
 
-// ---------- EDIT a visitor ----------
-router.put("/:id", (req, res) => {
+/* ==================== EDIT A VISITOR ==================== */
+router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const updatedVisitor = req.body;
-  const sql = "UPDATE visitors SET ? WHERE id = ?";
-  db.query(sql, [updatedVisitor, id], (err) => {
-    if (err) return res.status(500).json(err);
+  const updatedVisitor = {
+    visitorName: req.body.visitorName,
+    company: req.body.company,
+    personToVisit: req.body.personToVisit,
+    purpose: req.body.purpose,
+    idType: req.body.idType,
+    idNumber: req.body.idNumber,
+    badgeNumber: req.body.badgeNumber,
+    branch: req.body.branch || "",
+    vehicleMode: req.body.vehicleMode,
+    vehicleDetails: req.body.vehicleDetails,
+    date: req.body.date,
+    timeIn: req.body.timeIn || "",
+    timeOut: req.body.timeOut || "",
+    appointmentRequest: req.body.appointmentRequest ? 1 : 0,
+  };
+
+  try {
+    await dbPromise.query("UPDATE visitors SET ? WHERE id = ?", [updatedVisitor, id]);
     res.json({ id: parseInt(id), ...updatedVisitor });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update visitor" });
+  }
 });
 
-// ---------- DELETE a visitor ----------
-router.delete("/:id", (req, res) => {
+/* ==================== DELETE A VISITOR ==================== */
+router.delete("/:id", async (req, res) => {
   const { id } = req.params;
-  const sql = "DELETE FROM visitors WHERE id = ?";
-  db.query(sql, [id], (err) => {
-    if (err) return res.status(500).json(err);
+
+  try {
+    const [result] = await dbPromise.query("DELETE FROM visitors WHERE id = ?", [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Visitor not found" });
+    }
     res.json({ message: "Visitor deleted", id: parseInt(id) });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete visitor" });
+  }
 });
 
 module.exports = router;

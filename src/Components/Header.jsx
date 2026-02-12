@@ -1,16 +1,18 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  FaTruck,
-  FaUser,
-  FaTachometerAlt,
-  FaSignOutAlt,
-  FaClipboardList,
-  FaBars,
-  FaSun,
-  FaMoon,
-} from "react-icons/fa";
+  HiOutlineTruck,
+  HiOutlineUser,
+  HiOutlineViewGrid,
+  HiOutlineClipboardList,
+  HiOutlineLogout,
+  HiOutlineMenu,
+  HiOutlineSun,
+  HiOutlineMoon,
+  HiOutlineCog,
+  HiOutlineOfficeBuilding,
+} from "react-icons/hi";
 import LogoutModal from "../Components/Modals/LogoutModal";
 
 function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode }) {
@@ -22,10 +24,14 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
   const [hoverLogo, setHoverLogo] = useState(false);
   const touchStartX = useRef(0);
 
-  const toggleCollapse = () => setIsCollapsed((v) => !v);
+  const toggleCollapse = () => setIsCollapsed(v => !v);
 
-  // Load request count from localStorage every 3 seconds
-  useState(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+const role = user?.role;
+
+
+  // Load request count
+  useEffect(() => {
     const load = () => {
       const r = JSON.parse(localStorage.getItem("pendingRequests")) || [];
       setRequestCount(r.length);
@@ -33,26 +39,79 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
     load();
     const i = setInterval(load, 3000);
     return () => clearInterval(i);
-  });
+  }, []);
 
   const navItems = [
-    { icon: <FaTachometerAlt />, label: "Dashboard", path: "/dashboard" },
-    { icon: <FaTruck />, label: "Trucks", path: "/trucks" },
-    { icon: <FaUser />, label: "Visitors", path: "/visitors" },
-    { icon: <FaClipboardList />, label: "Requests", path: "/requests", badge: requestCount },
-  ];
+  {
+    icon: HiOutlineViewGrid,
+    label: "Dashboard",
+    path: "/dashboard",
+    roles: ["User", "Admin", "IT"],
+    color: "text-white-400",
+  },
+  {
+    icon: HiOutlineTruck,
+    label: "Vehicle In's & out's",
+    path: "/trucks",
+    roles: ["User", "Admin", "IT"],
+    color: "text-white-400",
+  },
+  {
+    icon: HiOutlineUser,
+    label: "Visitors",
+    path: "/visitors",
+    roles: ["User", "Admin", "IT"],
+    color: "text-white-400",
+  },
+  {
+    icon: HiOutlineClipboardList,
+    label: "Requests",
+    path: "/requests",
+    roles: ["Admin", "IT"],
+    badge: requestCount,
+    color: "text-white-400",
+  },
+  {
+  icon: HiOutlineTruck,
+  label: "Vehicle Management",
+  path: "/vehicle-management",
+  roles: ["Admin", "IT"], // 🔐 ONLY Admin & IT
+  color: "text-white-400",
+},
+  {
+  icon: HiOutlineOfficeBuilding,
+  label: "Branch / Clients",
+  path: "/branches",
+  roles: ["IT"],
+  color: "text-white-400",
+},
+  {
+    icon: HiOutlineUser,
+    label: "Accounts",
+    path: "/accounts",
+    roles: ["IT"],
+    color: "text-white-400",
+  },
+  {
+    icon: HiOutlineCog,
+    label: "Settings",
+    path: "/settings",
+    roles: ["User", "Admin", "IT"],
+    color: "text-white-300",
+  },
+];
+
 
   const side = isDesktop ? "left" : "right";
 
-  const handleTouchStart = (e) => (touchStartX.current = e.touches[0].clientX);
-  const handleTouchEnd = (e) => {
+  const handleTouchStart = e => (touchStartX.current = e.touches[0].clientX);
+  const handleTouchEnd = e => {
     const diff = e.changedTouches[0].clientX - touchStartX.current;
     if (!mobileOpen && diff < -50) setMobileOpen(true);
     if (mobileOpen && diff > 50) setMobileOpen(false);
   };
 
-  // ===== LOGOUT FUNCTION =====
-    const handleLogoutConfirm = () => {
+  const handleLogoutConfirm = () => {
     localStorage.removeItem("isLoggedIn");
     setIsLogoutModalOpen(false);
     navigate("/", { replace: true });
@@ -60,7 +119,7 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
 
   return (
     <>
-      {/* MOBILE OVERLAY */}
+      {/* Mobile overlay */}
       {!isDesktop && mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40"
@@ -68,50 +127,33 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* Sidebar */}
       <AnimatePresence>
         {(isDesktop || mobileOpen) && (
           <motion.aside
-            initial={{
-              x: isDesktop ? (isCollapsed ? -64 : -240) : 240,
-              opacity: 0,
-            }}
-            animate={{
-              x: 0,
-              opacity: 1,
-              transition: { type: "spring", stiffness: 300, damping: 30 },
-            }}
-            exit={{
-              x: isDesktop ? -240 : 240,
-              opacity: 0,
-              transition: { type: "spring", stiffness: 300, damping: 30 },
-            }}
+            initial={{ x: isDesktop ? (isCollapsed ? -64 : -240) : 240, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: isDesktop ? -240 : 240, opacity: 0 }}
             className={`fixed top-0 z-50 h-full flex flex-col shadow-xl overflow-hidden
-              ${darkMode ? "bg-gray-900 text-gray-300" : "text-slate-900"}
+              ${darkMode ? "bg-gray-900 text-gray-300" : "bg-green-700 text-white"}
               ${side === "left" ? "left-0" : "right-0"}`}
-            style={{
-              width: isCollapsed ? 64 : 240,
-              transition: "width 0.3s ease",
-            }}
+            style={{ width: isCollapsed ? 72 : 240 }}
             onTouchStart={!isDesktop ? handleTouchStart : undefined}
             onTouchEnd={!isDesktop ? handleTouchEnd : undefined}
           >
-            {/* Animated Gradient for Light Mode */}
+            {/* Gradient for light mode */}
             {!darkMode && (
               <motion.div
                 className="absolute inset-0 z-0"
-                animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
-                transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
                 style={{
-                  background: "linear-gradient(to bottom, #22c55e, #3b82f6)",
-                  backgroundSize: "100% 200%",
+                  background: "linear-gradient(to bottom, #147e3d, #2931c9)",
+                  backgroundSize: "100% 100%",
                 }}
               />
             )}
 
-            {/* Content */}
             <div className="relative z-10 flex flex-col h-full">
-              {/* LOGO ROW */}
+              {/* LOGO + TOGGLE */}
               <div
                 className="relative flex items-center h-14 px-3"
                 onMouseEnter={() => setHoverLogo(true)}
@@ -128,24 +170,13 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
                   <motion.button
                     onClick={toggleCollapse}
                     className={`absolute w-6 h-6 flex items-center justify-center
-                      rounded-md
-                      bg-gradient-to-br from-emerald-500/60 to-sky-500/60
-                      border border-sky-600/40
+                      rounded-md bg-white/20 border border-white/30
                       ${side === "left" ? "right-2" : "left-2"}`}
                   >
                     <motion.span
-                      animate={{
-                        rotate:
-                          side === "left"
-                            ? isCollapsed
-                              ? 180
-                              : 0
-                            : isCollapsed
-                            ? 0
-                            : 180,
-                      }}
+                      animate={{ rotate: side === "left" ? (isCollapsed ? 180 : 0) : (isCollapsed ? 0 : 180) }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      className="text-slate-900 text-sm"
+                      className="text-white text-sm"
                     >
                       ❮
                     </motion.span>
@@ -153,60 +184,231 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
                 )}
               </div>
 
-              {/* NAV */}
-              <nav className="flex flex-col flex-1 mt-2 text-sm">
-                {navItems.map((item, i) => (
-                  <div key={i} className="relative">
-                    <Link
-                      to={item.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center transition
-                        ${
-                          isCollapsed
-                            ? "justify-center py-3"
-                            : "px-4 py-3 gap-3 rounded-lg"
-                        }
-                        ${
-                          location.pathname === item.path
-                            ? darkMode
-                              ? "bg-gradient-to-r from-blue-500/20 to-green-500/20 text-blue-300"
-                              : "bg-gradient-to-r from-emerald-600 to-sky-600 text-white shadow-md"
-                            : darkMode
-                            ? "hover:bg-green-500/10 hover:text-green-300"
-                            : "hover:bg-white/25 hover:text-slate-900"
-                        }`}
-                    >
-                      <span className={darkMode ? "text-blue-400" : "text-slate-900"}>
-                        {item.icon}
-                      </span>
-                      {!isCollapsed && <span>{item.label}</span>}
-                    </Link>
-                  </div>
-                ))}
+              {/* 🔹 PROFILE CARD */}
+{user && (
+  <div
+    className={`mx-3 mt-2 mb-3 rounded-xl transition-all
+      ${darkMode ? "bg-gray-800/70" : "bg-white/20 backdrop-blur"}
+      ${
+  isCollapsed
+    ? "p-2 flex justify-center bg-transparent shadow-none"
+    : "p-3 flex items-center gap-3"
+}
 
-                <div className="flex-1" />
+    `}
+  >
+    {/* Avatar */}
+    <div
+      className={`w-10 h-10 rounded-full flex items-center justify-center
+        text-white font-bold text-lg
+        ${
+          user.role === "Admin"
+            ? "bg-gradient-to-br from-green-400 to-emerald-600"
+            : user.role === "User"
+            ? "bg-gradient-to-br from-blue-400 to-sky-600"
+            : user.role === "IT"
+            ? "bg-gradient-to-br from-red-400 to-rose-600"
+            : "bg-gray-500"
+        }
+      `}
+    >
+      {user.firstName?.charAt(0)} 
+    </div>
 
-                {/* THEME TOGGLE */}
-                <button
-                  onClick={() => setDarkMode((v) => !v)}
-                  className={`flex items-center gap-3 py-3 ${
-                    isCollapsed ? "justify-center" : "px-4"
-                  } hover:bg-white/25`}
-                >
-                  {darkMode ? <FaSun className="text-yellow-400" /> : <FaMoon className="text-white" />}
-                  {!isCollapsed && <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>}
-                </button>
+    {/* Name + Role */}
+    {!isCollapsed && (
+      <div className="leading-tight">
+        <p className="font-semibold text-sm">
+          {user.firstName} {user.lastName}
+        </p>
+        <p className="text-xs opacity-80">{user.role} • {user.branch}</p>
+      </div>
+    )}
+  </div>
+)}
 
-                {/* LOGOUT */}
-                <button
-                  onClick={() => setIsLogoutModalOpen(true)}
-                  className={`flex items-center py-3 text-red-700 ${
-                    isCollapsed ? "justify-center" : "px-4 gap-3"
-                  } hover:bg-red-500/20`}
-                >
-                  <FaSignOutAlt />
-                  {!isCollapsed && <span>Log Out</span>}
-                </button>
+             {/* NAV ITEMS */}
+<nav className="flex flex-col flex-1 mt-2 text-sm">
+
+  {/* ===== MAIN MENU LABEL ===== */}
+  {!isCollapsed && (
+    <div className="flex items-center px-4 py-2 text-xs font-semibold uppercase text-white/70 gap-2">
+      <HiOutlineViewGrid className="text-white/50 text-sm" />
+      <span>Main Menu</span>
+    </div>
+  )}
+
+  {/* ===== MAIN MENU ITEMS ===== */}
+  {navItems
+    .filter(item => item.roles.includes(role) && !["Accounts", "Settings","Branch / Clients"].includes(item.label))
+    .map((item, i) => {
+      const active = location.pathname === item.path;
+      const Icon = item.icon;
+
+      return (
+        <div key={i} className="relative group">
+          <Link
+            to={item.path}
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center transition
+${
+  isCollapsed
+    ? "h-12 w-full flex items-center justify-center"
+    : "px-4 py-3 gap-3 rounded-lg"
+}
+              ${active
+                ? darkMode
+                  ? "bg-gradient-to-r from-blue-500/20 to-green-500/20 text-blue-300"
+                  : "bg-white/20 shadow-md"
+                : darkMode
+                  ? "hover:bg-green-500/10"
+                  : "hover:bg-white/20"}`}
+          >
+            <Icon className={`${item.color} text-lg`} />
+            {!isCollapsed && <span>{item.label}</span>}
+          </Link>
+
+          {/* TOOLTIP ON HOVER */}
+          {isCollapsed && (
+            <span className="absolute left-full top-1/2 ml-4 -translate-y-1/2
+bg-black text-white text-xs px-2 py-1 rounded shadow-lg
+opacity-0 group-hover:opacity-100 transition
+pointer-events-none whitespace-nowrap z-50"
+>
+              {item.label}
+            </span>
+          )}
+        </div>
+      );
+    })}
+
+  {/* ===== DIVIDER ===== */}
+  {!isCollapsed && <div className="my-2 border-t border-white/30 mx-4" />}
+
+  {/* ===== SETTINGS & ACCOUNTS LABEL ===== */}
+  {!isCollapsed && (
+    <div className="flex items-center px-4 py-2 text-xs font-semibold uppercase text-white/70 gap-2">
+      <HiOutlineCog className="text-white/50 text-sm" />
+      <span>Settings & Account</span>
+    </div>
+  )}
+
+  {/* ===== SETTINGS & ACCOUNTS ITEMS ===== */}
+  {navItems
+    .filter(item => item.roles.includes(role) && ["Accounts", "Settings","Branch / Clients"].includes(item.label))
+    .map((item, i) => {
+      const active = location.pathname === item.path;
+      const Icon = item.icon;
+
+      return (
+        <div key={i} className="relative group">
+          <Link
+            to={item.path}
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center transition
+${
+  isCollapsed
+    ? "h-12 w-full flex items-center justify-center"
+    : "px-4 py-3 gap-3 rounded-lg"
+}
+              ${active
+                ? darkMode
+                  ? "bg-gradient-to-r from-blue-500/20 to-green-500/20 text-blue-300"
+                  : "bg-white/20 shadow-md"
+                : darkMode
+                  ? "hover:bg-green-500/10"
+                  : "hover:bg-white/20"}`}
+          >
+            <Icon className={`${item.color} text-lg`} />
+            {!isCollapsed && <span>{item.label}</span>}
+          </Link>
+
+          {/* TOOLTIP ON HOVER */}
+          {isCollapsed && (
+            <span className="absolute left-full top-1/2 ml-3 -translate-y-1/2
+              bg-black text-white text-xs px-2 py-1 rounded
+              opacity-0 group-hover:opacity-100 transition
+              pointer-events-none whitespace-nowrap z-50">
+              {item.label}
+            </span>
+          )}
+        </div>
+      );
+    })}
+
+                {/* ===== BOTTOM ACTIONS ===== */}
+<div className="mt-auto pb-2">
+
+  {/* ===== THEME TOGGLE ===== */}
+  <div className="relative group">
+    <button
+      onClick={() => setDarkMode(v => !v)}
+      className={`
+        w-full h-12
+        flex items-center
+        ${isCollapsed ? "justify-center" : "px-4 gap-3"}
+        hover:bg-white/20
+        transition
+      `}
+    >
+      {darkMode ? (
+        <HiOutlineSun className="text-yellow-400 text-lg" />
+      ) : (
+        <HiOutlineMoon className="text-indigo-200 text-lg" />
+      )}
+      {!isCollapsed && (
+        <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
+      )}
+    </button>
+
+    {/* TOOLTIP */}
+    {isCollapsed && (
+      <span
+        className="
+          absolute left-full top-1/2 ml-4 -translate-y-1/2
+          bg-black text-white text-xs px-2 py-1 rounded shadow-lg
+          opacity-0 group-hover:opacity-100 transition
+          pointer-events-none whitespace-nowrap z-50
+        "
+      >
+        Toggle theme
+      </span>
+    )}
+  </div>
+
+  {/* ===== LOGOUT ===== */}
+  <div className="relative group">
+    <button
+      onClick={() => setIsLogoutModalOpen(true)}
+      className={`
+        w-full h-12
+        flex items-center text-red-200
+        ${isCollapsed ? "justify-center" : "px-4 gap-3"}
+        hover:bg-red-500/20
+        transition
+      `}
+    >
+      <HiOutlineLogout className="text-lg" />
+      {!isCollapsed && <span>Log Out</span>}
+    </button>
+
+    {/* TOOLTIP */}
+    {isCollapsed && (
+      <span
+        className="
+          absolute left-full top-1/2 ml-4 -translate-y-1/2
+          bg-black text-white text-xs px-2 py-1 rounded shadow-lg
+          opacity-0 group-hover:opacity-100 transition
+          pointer-events-none whitespace-nowrap z-50
+        "
+      >
+        Log out
+      </span>
+    )}
+  </div>
+
+</div>
+
               </nav>
             </div>
           </motion.aside>
@@ -218,13 +420,13 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
         <button
           onClick={() => setMobileOpen(true)}
           className="fixed top-4 right-4 z-50 p-2 rounded-lg
-            bg-gradient-to-br from-emerald-600 to-sky-600 text-white"
+            bg-gradient-to-br from-blue-600 to-sky-500 text-white"
         >
-          <FaBars />
+          <HiOutlineMenu />
         </button>
       )}
 
-       <LogoutModal
+      <LogoutModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={handleLogoutConfirm}

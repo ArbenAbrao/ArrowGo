@@ -1,184 +1,377 @@
-// src/Components/Appointments/AppointmentRequestsModal.jsx
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useMemo, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { BellIcon, XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
+import {
+  BellIcon,
+  XMarkIcon,
+  CalendarIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AppointmentRequestsModal({
   isOpen,
   onClose,
-  appointmentRequests,
+  appointmentRequests = [],
   acceptAppointment,
-  rejectAppointment,
   processingId,
-  appointmentFilterDate,
-  setAppointmentFilterDate,
   darkMode = true,
 }) {
-  const [showToast, setShowToast] = useState({ visible: false, message: "" });
+  /* ================= LOCAL STATES ================= */
+  const [filterDate, setFilterDate] = useState(null);
+  const [search, setSearch] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [toast, setToast] = useState(null);
+  const [openDates, setOpenDates] = useState({});
+  const [openBranches, setOpenBranches] = useState({});
 
-  const filteredAppointments = appointmentRequests.filter((v) =>
-    appointmentFilterDate
-      ? new Date(v.date).toDateString() ===
-        new Date(appointmentFilterDate).toDateString()
-      : true
-  );
+  const isDesktop =
+    typeof window !== "undefined" && window.innerWidth >= 640;
 
-  const appointmentsCount = appointmentRequests.length;
+  /* ================= HELPERS ================= */
+  const normalizeDate = (v) =>
+    v ? new Date(v).toISOString().split("T")[0] : "";
 
+  const readableDate = (v) =>
+    new Date(v).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  /* ================= BRANCH OPTIONS ================= */
+  const branchOptions = useMemo(() => {
+    return [...new Set(appointmentRequests.map((a) => a.branch).filter(Boolean))];
+  }, [appointmentRequests]);
+
+  /* ================= FILTER + GROUP ================= */
+  const groupedAppointments = useMemo(() => {
+    const approved = appointmentRequests.filter(
+      (a) => String(a.status).toLowerCase() === "approved"
+    );
+
+    const filtered = approved.filter((a) => {
+      const matchDate = filterDate
+        ? normalizeDate(a.date) === normalizeDate(filterDate)
+        : true;
+
+      const q = search.toLowerCase();
+      const matchSearch =
+        a.visitor_name.toLowerCase().includes(q) ||
+        a.person_to_visit.toLowerCase().includes(q);
+
+      const matchBranch = selectedBranch
+        ? a.branch === selectedBranch
+        : true;
+
+      return matchDate && matchSearch && matchBranch;
+    });
+
+    const grouped = filtered.reduce((acc, item) => {
+      const key = normalizeDate(item.date);
+      acc[key] = acc[key] || [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .sort(([a], [b]) => new Date(a) - new Date(b))
+      .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+  }, [appointmentRequests, filterDate, search, selectedBranch]);
+
+  /* ================= ACTION ================= */
+  const handleAccept = (raw) => {
+    acceptAppointment({
+      ...raw,
+      visitorName: raw.visitor_name,
+      personToVisit: raw.person_to_visit,
+      timeIn: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      timeOut: "",
+    });
+
+    setToast("Appointment accepted • Time-in recorded ✅");
+    setTimeout(() => setToast(null), 2200);
+  };
+
+  /* ================= ACCORDION ================= */
+  const toggleDate = (key) => {
+    if (isDesktop) return;
+    setOpenDates((p) => ({ ...p, [key]: !p[key] }));
+  };
+
+  const toggleBranch = (key) => {
+    setOpenBranches((p) => ({ ...p, [key]: !p[key] }));
+  };
+
+  /* ================= THEME ================= */
   const theme = darkMode
-    ? {
-        modalBg: "bg-gray-900 text-gray-100",
-        headerBg: "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white",
-        inputBg: "bg-gray-800 text-gray-100 border-gray-700",
-        btnAccept: "bg-green-500 hover:bg-green-600 text-black",
-        btnReject: "bg-red-500 hover:bg-red-600 text-black",
-        btnSecondary: "border text-gray-100 hover:bg-gray-700",
-        neonGlow: "hover:shadow-[0_0_12px_#00ff66] focus:shadow-[0_0_12px_#00ff66]",
-      }
-    : {
-        modalBg: "bg-white text-gray-900",
-        headerBg: "bg-gradient-to-r from-indigo-400 to-indigo-200 text-gray-900",
-        inputBg: "bg-gray-100 text-gray-900 border-gray-300",
-        btnAccept: "bg-green-100 hover:bg-green-200 text-green-700",
-        btnReject: "bg-red-100 hover:bg-red-200 text-red-700",
-        btnSecondary: "border text-gray-900 hover:bg-gray-100",
-        neonGlow: "hover:shadow-[0_0_12px_#00ff66] focus:shadow-[0_0_12px_#00ff66]",
-      };
-
-  const handleAccept = (visitor) => {
-    acceptAppointment(visitor);
-    setShowToast({ visible: true, message: "Appointment accepted ✅" });
-    setTimeout(() => setShowToast({ visible: false, message: "" }), 2500);
-  };
-
-  const handleReject = (id) => {
-    rejectAppointment(id);
-    setShowToast({ visible: true, message: "Appointment rejected ❌" });
-    setTimeout(() => setShowToast({ visible: false, message: "" }), 2500);
-  };
+    ? { modal: "bg-gray-900 text-gray-100", card: "bg-gray-800" }
+    : { modal: "bg-white text-gray-900", card: "bg-gray-100" };
 
   return (
     <>
-      <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={onClose}>
-          <Transition.Child
-            as={Fragment}
-            enter="transition ease-out duration-300"
-            enterFrom="opacity-0 -translate-y-4 scale-95"
-            enterTo="opacity-100 translate-y-0 scale-100"
-            leave="transition ease-in duration-200"
-            leaveFrom="opacity-100 translate-y-0 scale-100"
-            leaveTo="opacity-0 -translate-y-4 scale-95"
-          >
-            <div className="fixed top-16 left-1/2 transform -translate-x-1/2 w-full max-w-3xl">
-              <div className={`rounded-3xl overflow-hidden shadow-2xl border ${theme.modalBg}`}>
-                {/* Header */}
-                <div className={`sticky top-0 z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 ${theme.headerBg}`}>
+      <Transition show={isOpen} as={Fragment}>
+        <Dialog onClose={onClose} className="relative z-50">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+
+          <div className="fixed inset-0 flex justify-center pt-16">
+            <Dialog.Panel
+              className={`w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden ${theme.modal}`}
+            >
+              {/* HEADER */}
+              <div className="sticky top-0 z-10 px-6 py-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white">
+                <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     <BellIcon className="w-6 h-6" />
-                    <h3 className="text-xl font-semibold">Appointment Requests</h3>
-                    <span className="text-sm opacity-80">({appointmentsCount})</span>
+                    <h2 className="text-lg font-semibold">
+                      Approved Appointments
+                    </h2>
                   </div>
-
-                  <div className="flex items-center gap-2 mt-2 md:mt-0">
-                    <DatePicker
-                      selected={appointmentFilterDate}
-                      onChange={setAppointmentFilterDate}
-                      placeholderText="Filter by date"
-                      dateFormat="MMM d, yyyy"
-                      className={`border p-2 rounded ${theme.inputBg} ${theme.neonGlow}`}
-                      popperProps={{
-                        strategy: "fixed",
-                        modifiers: [{ name: "preventOverflow", options: { altAxis: true, padding: 8 } }],
-                      }}
-                    />
-                    {appointmentFilterDate && (
-                      <button
-                        onClick={() => setAppointmentFilterDate(null)}
-                        className="px-3 py-1 rounded bg-yellow-600/30 hover:bg-yellow-600/50 transition"
-                      >
-                        Clear
-                      </button>
-                    )}
-                    <button
-                      onClick={onClose}
-                      className="px-3 py-1 rounded bg-yellow-600/30 hover:bg-yellow-600/50 transition"
-                    >
-                      Close
-                    </button>
-                  </div>
+                  <button
+                    onClick={onClose}
+                    className="p-2 rounded-lg bg-black/20"
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
                 </div>
 
-                <div className="p-5 max-h-[70vh] overflow-y-auto space-y-4">
-                  {filteredAppointments.length === 0 ? (
-                    <p className="text-center text-gray-400 py-6">
-                      No appointment requests for selected date.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {filteredAppointments.map((visitor) => (
-                        <motion.div
-                          key={visitor.id}
-                          className={`p-5 rounded-2xl shadow-lg flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.02]`}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          {/* Visitor Info */}
-                          <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-lg font-bold truncate">{visitor.visitorName}</h2>
-                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">Appointment</span>
-                          </div>
-                          <div className="space-y-1 text-sm">
-                            <p><span className="font-semibold">Company:</span> {visitor.company}</p>
-                            <p><span className="font-semibold">Person:</span> {visitor.personToVisit}</p>
-                            <p><span className="font-semibold">Purpose:</span> {visitor.purpose}</p>
-                            <p><span className="font-semibold">Date:</span> {new Date(visitor.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</p>
-                            <p><span className="font-semibold">Time:</span> {visitor.timeIn}</p>
-                          </div>
+                {/* FILTERS */}
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-2.5 opacity-70" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search visitor or person"
+                      className="w-full pl-9 py-2 rounded-lg bg-black/20 border border-white/20"
+                    />
+                  </div>
 
-                          {/* Action Buttons */}
-                          <div className="flex justify-end gap-3 mt-4">
-                            <button
-                              onClick={() => handleReject(visitor.id)}
-                              disabled={processingId === visitor.id}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold ${theme.btnReject} transition`}
-                            >
-                              <XMarkIcon className="w-4 h-4" /> Reject
-                            </button>
-                            <button
-                              onClick={() => handleAccept(visitor)}
-                              disabled={processingId === visitor.id}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold ${theme.btnAccept} transition`}
-                            >
-                              <CheckIcon className="w-4 h-4" /> Accept
-                            </button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
+                  <div className="relative">
+                    <CalendarIcon className="w-4 h-4 absolute left-3 top-2.5 opacity-70" />
+                    <DatePicker
+                      selected={filterDate}
+                      onChange={setFilterDate}
+                      placeholderText="Filter date"
+                      className="w-full pl-9 py-2 rounded-lg bg-black/20 border border-white/20"
+                    />
+                  </div>
+
+                  <select
+                    value={selectedBranch}
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                    className="px-3 py-2 rounded-lg bg-black/20 border border-white/20"
+                  >
+                    <option value="">All Branches</option>
+                    {branchOptions.map((b) => (
+                      <option key={b}>{b}</option>
+                    ))}
+                  </select>
+
+                  {(filterDate || selectedBranch) && (
+                    <button
+                      onClick={() => {
+                        setFilterDate(null);
+                        setSelectedBranch("");
+                      }}
+                      className="rounded-lg bg-yellow-400/30"
+                    >
+                      Clear
+                    </button>
                   )}
                 </div>
               </div>
-            </div>
-          </Transition.Child>
+
+              {/* BODY */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
+                {Object.entries(groupedAppointments).map(
+                  ([dateKey, items]) => {
+                    const isOpen = openDates[dateKey];
+
+                    const branches = items.reduce((acc, i) => {
+                      const b = i.branch || "Unknown Branch";
+                      acc[b] = acc[b] || [];
+                      acc[b].push(i);
+                      return acc;
+                    }, {});
+
+                    return (
+                      <div key={dateKey} className="space-y-4">
+                        {/* DATE HEADER */}
+                        <button
+                          onClick={() => toggleDate(dateKey)}
+                          className="w-full flex justify-between items-center"
+                        >
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-sm font-semibold uppercase opacity-80">
+                              {readableDate(dateKey)}
+                            </h3>
+
+                            {!isDesktop && (
+                              <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/20">
+                                🏢 {Object.keys(branches).length} Branch
+                                {Object.keys(branches).length > 1 && "es"}
+                              </span>
+                            )}
+                          </div>
+
+                          {!isDesktop && (
+                            <ChevronDownIcon
+                              className={`w-5 h-5 transition-transform ${
+                                isOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          )}
+                        </button>
+
+                        {/* DESKTOP */}
+                        {isDesktop && (
+                          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                            {items.map((raw) => (
+                              <div
+                                key={raw.id}
+                                className={`rounded-xl p-5 ${theme.card}`}
+                              >
+                                <h4 className="font-semibold text-lg">
+                                  {raw.visitor_name}
+                                </h4>
+                                <p className="text-sm opacity-80">
+                                  Visiting: {raw.person_to_visit}
+                                </p>
+                                {/* BADGES */}
+                                    <div className="flex flex-wrap gap-2 mb-4 text-xs">
+                                      <span className="px-3 py-1 rounded-full bg-blue-500/20">
+                                        📅 {readableDate(raw.date)}
+                                      </span>
+
+                                      <span className="px-3 py-1 rounded-full bg-purple-500/20">
+                                        ⏰ {raw.schedule_time}
+                                      </span>
+
+                                      <span className="px-3 py-1 rounded-full bg-emerald-500/20">
+                                        🏢 {raw.branch || "Unknown Branch"}
+                                      </span>
+                                    </div>
+                                <button
+                                  onClick={() => handleAccept(raw)}
+                                  className="mt-4 w-full py-2 rounded-lg bg-green-500 text-black"
+                                >
+                                  Time In
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* MOBILE → BRANCH ACCORDION */}
+                        {!isDesktop && (
+                          <AnimatePresence>
+                            {isOpen &&
+                              Object.entries(branches).map(
+                                ([branch, list]) => {
+                                  const key = `${dateKey}-${branch}`;
+                                  const open = openBranches[key];
+
+                                  return (
+                                    <motion.div
+                                      key={key}
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: "auto" }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      className="ml-3"
+                                    >
+                                      <button
+                                        onClick={() => toggleBranch(key)}
+                                        className="w-full flex justify-between items-center px-3 py-2 rounded-lg bg-purple-500/10"
+                                      >
+                                        <span className="text-sm">
+                                          🏢 {branch}
+                                        </span>
+                                        <ChevronDownIcon
+                                          className={`w-4 h-4 transition-transform ${
+                                            open ? "rotate-180" : ""
+                                          }`}
+                                        />
+                                      </button>
+
+                                      <AnimatePresence>
+                                        {open && (
+                                          <motion.div
+                                            initial={{ opacity: 0, y: -8 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -8 }}
+                                            className="grid gap-4 mt-3"
+                                          >
+                                            {list.map((raw) => (
+                                              <div
+                                                key={raw.id}
+                                                className={`rounded-xl p-5 ${theme.card}`}
+                                              >
+                                                <h4 className="font-semibold">
+                                                  {raw.visitor_name}
+                                                </h4>
+                                                <p className="text-sm opacity-80">
+                                                  Visiting:{" "}
+                                                  {raw.person_to_visit}
+                                                </p>
+                                                {/* BADGES */}
+                                    <div className="flex flex-wrap gap-2 mb-4 text-xs">
+                                      <span className="px-3 py-1 rounded-full bg-blue-500/20">
+                                        📅 {readableDate(raw.date)}
+                                      </span>
+
+                                      <span className="px-3 py-1 rounded-full bg-purple-500/20">
+                                        ⏰ {raw.schedule_time}
+                                      </span>
+
+                                      <span className="px-3 py-1 rounded-full bg-emerald-500/20">
+                                        🏢 {raw.branch || "Unknown Branch"}
+                                      </span>
+                                    </div>
+                                                <button
+                                                  onClick={() =>
+                                                    handleAccept(raw)
+                                                  }
+                                                  className="mt-4 w-full py-2 rounded-lg bg-green-500 text-black"
+                                                >
+                                                  Time In
+                                                </button>
+                                              </div>
+                                            ))}
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </motion.div>
+                                  );
+                                }
+                              )}
+                          </AnimatePresence>
+                        )}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </Dialog.Panel>
+          </div>
         </Dialog>
       </Transition>
 
-      {/* Toast */}
+      {/* TOAST */}
       <AnimatePresence>
-        {showToast.visible && (
+        {toast && (
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            transition={{ duration: 0.4 }}
-            className="fixed bottom-5 right-5 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 font-medium"
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-5 right-5 bg-green-600 px-6 py-3 rounded-xl text-white"
           >
-            {showToast.message}
+            {toast}
           </motion.div>
         )}
       </AnimatePresence>

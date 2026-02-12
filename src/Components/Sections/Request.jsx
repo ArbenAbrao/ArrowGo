@@ -33,7 +33,7 @@ export default function Request({ onLoginClick }) {
   ];
 
   return (
-    <section className="bg-white py-20">
+    <section id="Request" className="bg-white py-20">
       <div className="max-w-6xl mx-auto px-6 text-center">
         <h2 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-green-500">
           Register Truck & Set Appointment

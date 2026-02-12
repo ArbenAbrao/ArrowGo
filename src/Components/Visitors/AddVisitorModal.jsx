@@ -47,13 +47,14 @@ export default function AddVisitorModal({
     onSubmit(e);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
-    onClose(); // optionally close after submitting
+    onClose();
   };
 
   return (
     <>
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={onClose}>
+          {/* Overlay */}
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -66,6 +67,7 @@ export default function AddVisitorModal({
             <div className="fixed inset-0 bg-black/50 backdrop-blur-md" />
           </Transition.Child>
 
+          {/* Modal container */}
           <div className="fixed inset-0 flex items-center justify-center p-4">
             <Transition.Child
               as={Fragment}
@@ -99,7 +101,8 @@ export default function AddVisitorModal({
                 </motion.div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-3">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                  {/* Text Inputs */}
                   {[
                     { name: "visitorName", placeholder: "Full Name", required: true },
                     { name: "company", placeholder: "Company / From" },
@@ -154,23 +157,26 @@ export default function AddVisitorModal({
                             transition={{ duration: 0.2 }}
                             className={`absolute z-50 w-full rounded shadow-lg mt-1 flex flex-col ${theme.dropdownBg}`}
                           >
-                            {["PhilHealth ID", "SSS ID", "Driver's License", "TIN ID", "Other"].map((type, i) => (
-                              <span
-                                key={i}
-                                className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
-                                onClick={() => {
-                                  onChange({ target: { name: "idType", value: type } });
-                                  setDropdownOpen(null);
-                                }}
-                              >
-                                {type}
-                              </span>
-                            ))}
+                            {["PhilHealth ID", "SSS ID", "Driver's License", "TIN ID", "Other"].map(
+                              (type, i) => (
+                                <span
+                                  key={i}
+                                  className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
+                                  onClick={() => {
+                                    onChange({ target: { name: "idType", value: type } });
+                                    setDropdownOpen(null);
+                                  }}
+                                >
+                                  {type}
+                                </span>
+                              )
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </motion.div>
 
+                    {/* ID Number */}
                     <motion.input
                       variants={inputVariants}
                       initial="hidden"
@@ -186,11 +192,62 @@ export default function AddVisitorModal({
                     />
                   </div>
 
-                  <motion.select
+                  {/* Branch Dropdown */}
+                  <motion.div
                     variants={inputVariants}
                     initial="hidden"
                     animate="visible"
                     transition={{ delay: 0.35 }}
+                    className="relative"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDropdownOpen(dropdownOpen === "branch" ? null : "branch")
+                      }
+                      className={`w-full border p-2 rounded text-left flex justify-between items-center ${theme.inputBg} ${theme.neonGlow}`}
+                    >
+                      {form.branch || "Select Branch"}
+                      <ChevronDownIcon
+                        className={`w-5 h-5 ml-2 transition-transform ${
+                          dropdownOpen === "branch" ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    <AnimatePresence>
+                      {dropdownOpen === "branch" && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                          className={`absolute z-50 w-full rounded shadow-lg mt-1 flex flex-col ${theme.dropdownBg}`}
+                        >
+                          {["Marilao", "Taguig", "Palawan", "Davao", "Cebu"].map(
+                            (branchName, i) => (
+                              <span
+                                key={i}
+                                className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
+                                onClick={() => {
+                                  onChange({ target: { name: "branch", value: branchName } });
+                                  setDropdownOpen(null);
+                                }}
+                              >
+                                {branchName}
+                              </span>
+                            )
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+
+                  {/* Badge Number */}
+                  <motion.select
+                    variants={inputVariants}
+                    initial="hidden"
+                    animate="visible"
+                    transition={{ delay: 0.4 }}
                     name="badgeNumber"
                     value={form.badgeNumber}
                     onChange={onChange}
@@ -205,18 +262,7 @@ export default function AddVisitorModal({
                     ))}
                   </motion.select>
 
-                  <motion.input
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: 0.4 }}
-                    type="date"
-                    name="date"
-                    value={form.date}
-                    onChange={onChange}
-                    className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
-                  />
-
+                  {/* Buttons */}
                   <div className="flex justify-end gap-3 mt-4">
                     <motion.button
                       type="button"
