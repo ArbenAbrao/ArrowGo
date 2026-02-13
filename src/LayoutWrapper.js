@@ -8,7 +8,6 @@ import { useLoader } from "./Context/LoaderContext";
 import Header from "./Components/Header";
 import Footer from "./Components/Footer";
 import ProtectedRoute from "./Components/ProtectedRoute";
-import PageLoader from "./Components/PageLoader";
 
 /* Pages */
 import Welcome from "./Pages/Welcome";
