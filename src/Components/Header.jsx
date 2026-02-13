@@ -68,7 +68,7 @@ const role = (user.role || "").trim().toLowerCase();
     icon: HiOutlineClipboardList,
     label: "Requests",
     path: "/requests",
-    roles: ["user", "admin", "it"],
+    roles: ["admin", "it"],
     badge: requestCount,
     color: "text-white-400",
   },
@@ -76,21 +76,21 @@ const role = (user.role || "").trim().toLowerCase();
   icon: HiOutlineTruck,
   label: "Vehicle Management",
   path: "/vehicle-management",
-  roles: ["user", "admin", "it"], // 🔐 ONLY Admin & IT
+  roles: ["admin", "it"], // 🔐 ONLY Admin & IT
   color: "text-white-400",
 },
   {
   icon: HiOutlineOfficeBuilding,
   label: "Branch / Clients",
   path: "/branches",
-  roles: ["user", "admin", "it"],
+  roles: ["it"],
   color: "text-white-400",
 },
   {
     icon: HiOutlineUser,
     label: "Accounts",
     path: "/accounts",
-    roles: ["user", "admin", "it"],
+    roles: ["it"],
     color: "text-white-400",
   },
   {

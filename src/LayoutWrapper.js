@@ -8,6 +8,7 @@ import { useLoader } from "./Context/LoaderContext";
 import Header from "./Components/Header";
 import Footer from "./Components/Footer";
 import ProtectedRoute from "./Components/ProtectedRoute";
+import PageLoader from "./Components/PageLoader";
 
 /* Pages */
 import Welcome from "./Pages/Welcome";
@@ -50,9 +51,7 @@ export default function LayoutWrapper() {
       const desktop = window.innerWidth >= 768;
       setIsDesktop(desktop);
 
-      if (!desktop) {
-        setIsCollapsed(false);
-      }
+      if (!desktop) setIsCollapsed(false);
     };
 
     window.addEventListener("resize", handleResize);
@@ -80,11 +79,10 @@ export default function LayoutWrapper() {
      ROUTE LOADER (DESKTOP ONLY)
   =============================== */
   useEffect(() => {
-    if (!isDesktop) return; // ❌ No loader on small screens
+    if (!isDesktop) return;
 
     setLoading(true);
     const timer = setTimeout(() => setLoading(false), 500);
-
     return () => clearTimeout(timer);
   }, [location.pathname, setLoading, isDesktop]);
 
@@ -93,20 +91,18 @@ export default function LayoutWrapper() {
   =============================== */
   if (isSpecialPage) {
     return (
-      <>
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<Welcome />} />
-            <Route path="/appointment" element={<Appointment />} />
-            <Route path="/truck-request" element={<TruckRequest />} />
-            <Route
-              path="/truck-details/:plateNumber"
-              element={<TruckDetails />}
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AnimatePresence>
-      </>
+      <AnimatePresence mode="sync">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Welcome />} />
+          <Route path="/appointment" element={<Appointment />} />
+          <Route path="/truck-request" element={<TruckRequest />} />
+          <Route
+            path="/truck-details/:plateNumber"
+            element={<TruckDetails />}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
     );
   }
 
@@ -115,6 +111,13 @@ export default function LayoutWrapper() {
   =============================== */
   return (
     <>
+      {isDesktop && (
+        <PageLoader
+          darkMode={darkMode}
+          sidebarWidth={isCollapsed ? 70 : 240}
+        />
+      )}
+
       <div
         className={`flex min-h-screen ${
           darkMode ? "bg-gray-800" : "bg-gray-50"
@@ -134,12 +137,12 @@ export default function LayoutWrapper() {
             marginLeft: isDesktop ? (isCollapsed ? 70 : 240) : 0,
           }}
         >
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="sync">
             <Routes location={location} key={location.pathname}>
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute allowedRoles={["User", "Admin", "IT"]}>
+                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
                     <Dashboard darkMode={darkMode} />
                   </ProtectedRoute>
                 }
@@ -148,7 +151,7 @@ export default function LayoutWrapper() {
               <Route
                 path="/trucks"
                 element={
-                  <ProtectedRoute allowedRoles={["User", "Admin", "IT"]}>
+                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
                     <Trucks darkMode={darkMode} />
                   </ProtectedRoute>
                 }
@@ -157,7 +160,7 @@ export default function LayoutWrapper() {
               <Route
                 path="/visitors"
                 element={
-                  <ProtectedRoute allowedRoles={["User", "Admin", "IT"]}>
+                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
                     <Visitors darkMode={darkMode} />
                   </ProtectedRoute>
                 }
@@ -166,7 +169,7 @@ export default function LayoutWrapper() {
               <Route
                 path="/requests"
                 element={
-                  <ProtectedRoute allowedRoles={["Admin", "IT"]}>
+                  <ProtectedRoute allowedRoles={["admin", "it"]}>
                     <Request darkMode={darkMode} />
                   </ProtectedRoute>
                 }
@@ -175,7 +178,7 @@ export default function LayoutWrapper() {
               <Route
                 path="/vehicle-management"
                 element={
-                  <ProtectedRoute allowedRoles={["Admin", "IT"]}>
+                  <ProtectedRoute allowedRoles={["admin", "it"]}>
                     <VehicleManagement darkMode={darkMode} />
                   </ProtectedRoute>
                 }
@@ -184,7 +187,7 @@ export default function LayoutWrapper() {
               <Route
                 path="/branches"
                 element={
-                  <ProtectedRoute allowedRoles={["IT"]}>
+                  <ProtectedRoute allowedRoles={["it"]}>
                     <Branches darkMode={darkMode} />
                   </ProtectedRoute>
                 }
@@ -193,7 +196,7 @@ export default function LayoutWrapper() {
               <Route
                 path="/accounts"
                 element={
-                  <ProtectedRoute allowedRoles={["IT"]}>
+                  <ProtectedRoute allowedRoles={["it"]}>
                     <Accounts darkMode={darkMode} />
                   </ProtectedRoute>
                 }
@@ -202,7 +205,7 @@ export default function LayoutWrapper() {
               <Route
                 path="/settings"
                 element={
-                  <ProtectedRoute allowedRoles={["User", "Admin", "IT"]}>
+                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
                     <Settings darkMode={darkMode} />
                   </ProtectedRoute>
                 }

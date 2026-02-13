@@ -4,9 +4,9 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   const isLoggedIn = localStorage.getItem("isLoggedIn");
   const user = JSON.parse(localStorage.getItem("user")) || {};
 
-  const role = (user.role || "").trim().toLowerCase();
+  const role = (user.role || "").toLowerCase().trim();
 
-  if (!isLoggedIn) {
+  if (isLoggedIn !== "true") {
     return <Navigate to="/" replace />;
   }
 
