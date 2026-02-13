@@ -21,7 +21,7 @@ export default function TruckDetails() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const clientRes = await axios.get(`/api/clients`);
+        const clientRes = await axios.get(`http://192.168.254.126:5000/api/clients`);
         const foundClient = clientRes.data.find((c) => c.plateNumber === plateNumber);
         if (!foundClient) {
           alert("Client not found!");
@@ -30,7 +30,7 @@ export default function TruckDetails() {
         }
         setClient(foundClient);
 
-        const trucksRes = await axios.get(`/api/trucks`);
+        const trucksRes = await axios.get(`http://192.168.254.126:5000/api/trucks`);
         const truckLogs = trucksRes.data.filter((t) => t.plateNumber === plateNumber);
         setLogs(truckLogs || []);
       } catch (err) {

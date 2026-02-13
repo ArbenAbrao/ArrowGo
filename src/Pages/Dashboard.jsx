@@ -26,10 +26,10 @@ export default function Dashboard({ darkMode }) {
       try {
         const [truckRes, visitorRes, clientRes, appointmentRes] =
           await Promise.all([
-            axios.get("/api/trucks"),
-            axios.get("/api/visitors"),
-            axios.get("/api/clients"),
-            axios.get("/api/appointment-requests"),
+            axios.get("http://192.168.254.126:5000/api/trucks"),
+            axios.get("http://192.168.254.126:5000/api/visitors"),
+            axios.get("http://192.168.254.126:5000/api/clients"),
+            axios.get("http://192.168.254.126:5000/sapi/appointment-requests"),
           ]);
 
         setTrucks(truckRes.data);

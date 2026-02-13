@@ -27,7 +27,7 @@ export default function Accounts({ darkMode }) {
   // Fetch accounts and logs
   const fetchAccounts = async () => {
     try {
-      const res = await fetch("/api/accounts");
+      const res = await fetch("http://192.168.254.126:5000/api/accounts");
       const data = await res.json();
       setAccounts(
         data.sort((a, b) =>
@@ -41,7 +41,7 @@ export default function Accounts({ darkMode }) {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch("/api/login-logs");
+      const res = await fetch("http://192.168.254.126:5000/api/login-logs");
       const data = await res.json();
       setLogs(data);
     } catch (error) {

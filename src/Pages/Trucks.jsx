@@ -65,7 +65,7 @@ const [selectedBranch, setSelectedBranch] = useState("");
   // ---------- Fetch Data ----------
 const fetchTrucks = async () => {
   try {
-    const res = await axios.get("/api/trucks");
+    const res = await axios.get("http://192.168.254.126:5000/api/trucks");
     setTrucks(res.data);
   } catch (err) {
     console.error(err);
@@ -74,7 +74,7 @@ const fetchTrucks = async () => {
 
 const fetchClients = async () => {
   try {
-    const res = await axios.get("/api/clients");
+    const res = await axios.get("http://192.168.254.126:5000/api/clients");
     setClients(res.data);
   } catch (err) {
     console.error(err);
@@ -119,7 +119,7 @@ const fetchClients = async () => {
 const handleRegisterSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.post("/api/register-truck", registerForm);
+    await axios.post("http://192.168.254.126:5000/api/register-truck", registerForm);
     await fetchTrucks();
 
     setRegisterForm({
@@ -163,7 +163,7 @@ const handleRegisterSubmit = async (e) => {
   const handleAddSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.post("/api/add-truck", addForm);
+    await axios.post("http://192.168.254.126:5000/api/add-truck", addForm);
     fetchTrucks();
     setIsAddModalOpen(false);
     setAddForm({
@@ -195,7 +195,7 @@ const handleTimeIn = async (truck) => {
       minute: "2-digit",
     });
 
-    await axios.put(`/api/trucks/${truck.id}/timein`, {
+    await axios.put(`http://192.168.254.126:5000/api/trucks/${truck.id}/timein`, {
       date,
       timeIn,
     });

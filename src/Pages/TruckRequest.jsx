@@ -5,7 +5,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import { FaFacebookF, FaInstagram, FaTwitter } from "react-icons/fa";
 import axios from "axios";
 
-const API = "/api"; // your backend
+const API = "http://192.168.254.126:5000/api"; // your backend
 
 export default function TruckRequest() {
   const [form, setForm] = useState({
