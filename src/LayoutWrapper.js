@@ -116,14 +116,6 @@ export default function LayoutWrapper() {
   =============================== */
   return (
     <>
-      {/* ✅ PageLoader only shows on Desktop */}
-      {isDesktop && (
-        <PageLoader
-          darkMode={darkMode}
-          sidebarWidth={isCollapsed ? 70 : 240}
-        />
-      )}
-
       <div
         className={`flex min-h-screen ${
           darkMode ? "bg-gray-800" : "bg-gray-50"
