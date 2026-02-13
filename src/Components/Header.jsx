@@ -26,8 +26,9 @@ function Header({ isCollapsed, setIsCollapsed, isDesktop, darkMode, setDarkMode 
 
   const toggleCollapse = () => setIsCollapsed(v => !v);
 
-  const user = JSON.parse(localStorage.getItem("user"));
-const role = user?.role;
+ const user = JSON.parse(localStorage.getItem("user")) || {};
+const role = (user.role || "").trim().toLowerCase();
+
 
 
   // Load request count
@@ -46,28 +47,28 @@ const role = user?.role;
     icon: HiOutlineViewGrid,
     label: "Dashboard",
     path: "/dashboard",
-    roles: ["User", "Admin", "IT"],
+    roles: ["user", "admin", "it"],
     color: "text-white-400",
   },
   {
     icon: HiOutlineTruck,
     label: "Vehicle In's & out's",
     path: "/trucks",
-    roles: ["User", "Admin", "IT"],
+    roles: ["user", "admin", "it"],
     color: "text-white-400",
   },
   {
     icon: HiOutlineUser,
     label: "Visitors",
     path: "/visitors",
-    roles: ["User", "Admin", "IT"],
+    roles: ["user", "admin", "it"],
     color: "text-white-400",
   },
   {
     icon: HiOutlineClipboardList,
     label: "Requests",
     path: "/requests",
-    roles: ["Admin", "IT"],
+    roles: ["user", "admin", "it"],
     badge: requestCount,
     color: "text-white-400",
   },
@@ -75,28 +76,28 @@ const role = user?.role;
   icon: HiOutlineTruck,
   label: "Vehicle Management",
   path: "/vehicle-management",
-  roles: ["Admin", "IT"], // 🔐 ONLY Admin & IT
+  roles: ["user", "admin", "it"], // 🔐 ONLY Admin & IT
   color: "text-white-400",
 },
   {
   icon: HiOutlineOfficeBuilding,
   label: "Branch / Clients",
   path: "/branches",
-  roles: ["IT"],
+  roles: ["user", "admin", "it"],
   color: "text-white-400",
 },
   {
     icon: HiOutlineUser,
     label: "Accounts",
     path: "/accounts",
-    roles: ["IT"],
+    roles: ["user", "admin", "it"],
     color: "text-white-400",
   },
   {
     icon: HiOutlineCog,
     label: "Settings",
     path: "/settings",
-    roles: ["User", "Admin", "IT"],
+    roles: ["user", "admin", "it"],
     color: "text-white-300",
   },
 ];
