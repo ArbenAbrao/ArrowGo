@@ -1,27 +1,27 @@
 const mysql = require("mysql2");
 
-// ================= HOSTINGER DATABASE CONFIG =================
-// Replace these values with the info from your Hostinger hPanel
+// Create MySQL connection (callback style - for old routes)
 const db = mysql.createConnection({
-  host: "mysql.hostinger.com",      // e.g., "localhost" or "mysql.hostinger.com"
-  user: "IT_ADMIN",      // e.g., "truck_user"
-  password: "ArrowgoITAdmin", // e.g., "yourpassword"
-  database: "dbtruck",  // e.g., "dbtruck"
-  
-  timezone: "+08:00",        // PH timezone
-  dateStrings: true          // Return DATE/DATETIME as strings (no timezone shift)
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "dbtruck",
+
+  // ✅ Important settings
+  timezone: "+08:00",   // Philippines timezone
+  dateStrings: true     // Return DATE/DATETIME as plain strings (no auto shift)
 });
 
-// Connect and log status
+// Connect to MySQL
 db.connect((err) => {
   if (err) {
-    console.error("❌ MySQL connection error:", err.message);
+    console.error("MySQL Connection Error:", err);
     return;
   }
-  console.log("✅ MySQL Connected to Hostinger database");
+  console.log("MySQL Connected (callback mode)");
 });
 
-// Promise wrapper for async/await routes
+// Promise wrapper (for async/await routes)
 const dbPromise = db.promise();
 
 module.exports = { db, dbPromise };
