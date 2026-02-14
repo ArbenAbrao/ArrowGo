@@ -58,12 +58,12 @@ export default function Visitors({ darkMode }) {
 
   /* ================= FETCH DATA ================= */
   const fetchVisitors = async () => {
-    const res = await axios.get("http://192.168.254.126:5000/api/visitors");
+    const res = await axios.get("https://tmvasm.arrowgo-logistics.com/api/visitors");
     setVisitors(res.data);
   };
 
   const fetchAppointments = async () => {
-    const res = await axios.get("http://192.168.254.126:5000/api/appointment-requests/approved");
+    const res = await axios.get("https://tmvasm.arrowgo-logistics.com/api/appointment-requests/approved");
     const approvedOnly = res.data.filter(
       (a) => String(a.status).toLowerCase().trim() === "approved"
     );
@@ -102,7 +102,7 @@ export default function Visitors({ darkMode }) {
       appointmentRequest: 1, // mark manual add as "accepted"
     };
 
-    const res = await axios.post("http://192.168.254.126:5000/api/visitors/add", payload);
+    const res = await axios.post("https://tmvasm.arrowgo-logistics.com/api/visitors/add", payload);
     setVisitors((prev) => [res.data, ...prev]);
     setIsAddModalOpen(false);
   };
@@ -126,12 +126,12 @@ export default function Visitors({ darkMode }) {
       }),
     };
 
-    await axios.put(`http://192.168.254.126:5000/api/visitors/${visitor.id}`, updated);
+    await axios.put(`https://tmvasm.arrowgo-logistics.com/api/visitors/${visitor.id}`, updated);
     setVisitors((p) => p.map((v) => (v.id === visitor.id ? updated : v)));
   };
 
   const handleDeleteConfirm = async () => {
-    await axios.delete(`http://192.168.254.126:5000/api/visitors/${deleteModal.visitorId}`);
+    await axios.delete(`https://tmvasm.arrowgo-logistics.com/api/visitors/${deleteModal.visitorId}`);
     setVisitors((p) => p.filter((v) => v.id !== deleteModal.visitorId));
     setDeleteModal({ open: false, visitorId: null });
   };
@@ -140,7 +140,7 @@ export default function Visitors({ darkMode }) {
   const acceptAppointment = async (appointment) => {
     try {
       setProcessingId(appointment.id);
-      await axios.put(`http://192.168.254.126:5000/api/appointment-requests/${appointment.id}/accept`);
+      await axios.put(`https://tmvasm.arrowgo-logistics.com/api/appointment-requests/${appointment.id}/accept`);
       fetchVisitors();
       fetchAppointments();
     } catch (err) {
@@ -153,7 +153,7 @@ export default function Visitors({ darkMode }) {
   const rejectAppointment = async (id) => {
     try {
       setProcessingId(id);
-      await axios.put(`http://192.168.254.126:5000/api/appointment-requests/${id}/reject`);
+      await axios.put(`https://tmvasm.arrowgo-logistics.com/api/appointment-requests/${id}/reject`);
       fetchAppointments();
     } catch (err) {
       console.error(err);

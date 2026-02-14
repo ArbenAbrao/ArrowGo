@@ -44,7 +44,7 @@ const [selectedBranch, setSelectedBranch] = useState("");
   useEffect(() => {
     if (!open) return;
     axios
-      .get("/api/clients")
+      .get("https://tmvasm.arrowgo-logistics.com/api/clients")
       .then((res) => setTrucks(res.data.sort((a, b) => a.id - b.id)))
       .catch(console.error);
   }, [open]);
@@ -136,7 +136,7 @@ useEffect(() => setCurrentPage(1), [selectedClient, selectedBranch, searchTerm, 
   const deleteTruck = async (id) => {
     if (!window.confirm("Delete this truck?")) return;
     try {
-      await axios.delete(`/api/clients/${id}`);
+      await axios.delete(`https://tmvasm.arrowgo-logistics.com/api/clients/${id}`);
       setTrucks((prev) => prev.filter((t) => Number(t.id) !== Number(id)));
       setSelectedIds((prev) => prev.filter((i) => Number(i) !== Number(id)));
       setCurrentPage((prev) => Math.max(prev - 1, 1));
@@ -150,7 +150,7 @@ useEffect(() => setCurrentPage(1), [selectedClient, selectedBranch, searchTerm, 
     if (!selectedIds.length) return;
     if (!window.confirm("Delete selected trucks?")) return;
     try {
-      await Promise.all(selectedIds.map((id) => axios.delete(`/api/clients/${id}`)));
+      await Promise.all(selectedIds.map((id) => axios.delete(`https://tmvasm.arrowgo-logistics.com/api/clients/${id}`)));
       setTrucks((prev) => prev.filter((t) => !selectedIds.includes(Number(t.id))));
       setSelectedIds([]);
       setCurrentPage(1);
@@ -419,7 +419,7 @@ ${t.payloadCapacity || ""}`
 
                               <td className="border p-2 text-center">
                                 <img
-                                  src={`/api/clients/${t.id}/qrcode`}
+                                  src={`https://tmvasm.arrowgo-logistics.com/api/clients/${t.id}/qrcode`}
                                   alt={`QR code for truck ${t.plateNumber}`}
                                   className="w-14 h-14 mx-auto cursor-pointer hover:scale-110 transition"
                                   onClick={() => openTruckDetails(t)}

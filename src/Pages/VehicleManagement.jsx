@@ -79,19 +79,19 @@ export default function VehicleManagement({ darkMode }) {
   useEffect(() => {
     // Get trucks
     axios
-      .get("http://192.168.254.126:5000/api/clients")
+      .get("https://tmvasm.arrowgo-logistics.com/api/clients")
       .then((res) => setTrucks(res.data.sort((a, b) => a.id - b.id)))
       .catch(console.error);
 
     // Get clients
     axios
-      .get("http://192.168.254.126:5000/api/clients")
+      .get("https://tmvasm.arrowgo-logistics.com/api/clients")
       .then((res) => setClients(res.data))
       .catch(console.error);
 
     // Get branches
     axios
-      .get("http://192.168.254.126:5000/api/branches")
+      .get("https://tmvasm.arrowgo-logistics.com/api/branches")
       .then((res) => setBranches(res.data))
       .catch(console.error);
   }, []);
@@ -174,7 +174,7 @@ export default function VehicleManagement({ darkMode }) {
 
   const deleteTruck = async (id) => {
     if (!window.confirm("Delete this truck?")) return;
-    await axios.delete(`http://192.168.254.126:5000/api/clients/${id}`);
+    await axios.delete(`https://tmvasm.arrowgo-logistics.com/api/clients/${id}`);
     setTrucks((prev) => prev.filter((t) => t.id !== id));
   };
 
@@ -190,13 +190,13 @@ export default function VehicleManagement({ darkMode }) {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    await axios.post("http://192.168.254.126:5000s/api/register-truck", registerForm);
+    await axios.post("https://tmvasm.arrowgo-logistics.com/api/register-truck", registerForm);
     setIsRegisterModalOpen(false);
   };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    await axios.post("http://192.168.254.126:5000/api/add-truck", addForm);
+    await axios.post("https://tmvasm.arrowgo-logistics.com/api/add-truck", addForm);
     setIsAddModalOpen(false);
   };
 

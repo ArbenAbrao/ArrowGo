@@ -8,8 +8,8 @@ export default function useRequests() {
 
   const loadRequests = async () => {
     try {
-      const resTruck = await axios.get("http://192.168.254.126:5000/api/truck-requests");
-      const resAppointment = await axios.get("http://192.168.254.126:5000/api/appointment-requests");
+      const resTruck = await axios.get("https://tmvasm.arrowgo-logistics.com/api/truck-requests");
+      const resAppointment = await axios.get("https://tmvasm.arrowgo-logistics.com/api/appointment-requests");
 
       const formattedTruck = resTruck.data.map(r => ({
         id: r.id,

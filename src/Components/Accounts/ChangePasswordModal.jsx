@@ -33,7 +33,7 @@ export default function ChangePasswordModal({ account, onClose, onSuccess }) {
 
     try {
       setLoading(true);
-      await axios.put(`/api/admin/accounts/${account.id}/reset-password`, {
+      await axios.put(`https://tmvasm.arrowgo-logistics.com/api/admin/accounts/${account.id}/reset-password`, {
         newPassword: passwords.next,
       });
       onSuccess();

@@ -58,7 +58,7 @@ export default function Welcome() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://192.168.254.126:5000/api/login", {
+      const response = await fetch("https://tmvasm.arrowgo-logistics.com/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usernameOrEmail: email, password }),

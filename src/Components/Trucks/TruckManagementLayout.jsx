@@ -68,7 +68,7 @@ function ActionSection({
   const contentRef = useRef(null);
 
   useEffect(() => {
-    axios.get("/api/branches").then((res) => setBranches(res.data));
+    axios.get("https://tmvasm.arrowgo-logistics.com/api/branches").then((res) => setBranches(res.data));
   }, []);
 
   return (

@@ -72,7 +72,7 @@ export default function AccountsTable({
     try {
       setUpdatingRole((prev) => ({ ...prev, [accId]: true }));
 
-      const res = await fetch(`/api/admin/accounts/${accId}/role`, {
+      const res = await fetch(`https://tmvasm.arrowgo-logistics.com/api/admin/accounts/${accId}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),

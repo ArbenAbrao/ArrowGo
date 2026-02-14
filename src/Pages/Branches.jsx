@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { HiPencil, HiTrash } from "react-icons/hi";
 
-const API = "http://192.168.254.126:5000/api";
+const API = "https://tmvasm.arrowgo-logistics.com/api";
 
 export default function Branches({ darkMode }) {
   const containerBg = darkMode

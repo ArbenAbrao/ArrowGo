@@ -27,7 +27,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
     if (!truck) return;
     const fetchTruckLogs = async () => {
       try {
-        const res = await axios.get("/api/trucks");
+        const res = await axios.get("https://tmvasm.arrowgo-logistics.com/api/trucks");
         const truckLogs = res.data.filter(t => t.plateNumber === truck.plateNumber);
         setLogs(truckLogs);
       } catch (err) {
@@ -42,7 +42,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
     if (!truck.clientTruckId) {
       const fetchClientId = async () => {
         try {
-          const res = await axios.get("/api/clients");
+          const res = await axios.get("https://tmvasm.arrowgo-logistics.com/api/clients");
           const client = res.data.find(c => c.plateNumber === truck.plateNumber);
           if (client) truck.clientTruckId = client.id;
         } catch (err) {
@@ -94,7 +94,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
       const formData = new FormData();
       formData.append("truckImage", file);
       const res = await axios.put(
-        `/api/clients/${truckId}/upload-image`,
+        `https://tmvasm.arrowgo-logistics.com/api/clients/${truckId}/upload-image`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
