@@ -10,8 +10,8 @@ const VisitorStats = forwardRef(({ darkMode }, ref) => {
   const fetchStats = async () => {
     try {
       const [visitorRes, appointmentRes] = await Promise.all([
-        axios.get("http://192.168.254.126:5000/api/visitors"),
-        axios.get("http://192.168.254.126:5000/api/appointment-requests/approved"),
+        axios.get("https://tmvasbackend.arrowgo-logistics.com/api/visitors"),
+        axios.get("https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests/approved"),
       ]);
 
       setVisitors(visitorRes.data || []);

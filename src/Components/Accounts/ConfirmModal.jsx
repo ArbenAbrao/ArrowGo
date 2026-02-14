@@ -9,9 +9,9 @@ export default function ConfirmModal({ account, action, onClose, onSuccess }) {
 
     try {
       if (action === "delete") {
-        await axios.delete(`http://192.168.254.126:5000/api/admin/accounts/${account.id}`);
+        await axios.delete(`https://tmvasbackend.arrowgo-logistics.com/api/admin/accounts/${account.id}`);
       } else {
-        await axios.put(`http://192.168.254.126:5000/api/admin/accounts/${account.id}/status`, {
+        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/admin/accounts/${account.id}/status`, {
           is_active: account.is_active ? 0 : 1,
         });
       }
