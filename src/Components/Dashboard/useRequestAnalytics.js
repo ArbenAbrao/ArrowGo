@@ -7,7 +7,7 @@ export default function useRequestAnalytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await axios.get("https://tmvasm.arrowgo-logistics.com/api/requests/analytics");
+      const res = await axios.get("http://192.168.254.126:5000/api/requests/analytics");
       setData(res.data);
     } catch (err) {
       console.error("Failed to fetch request analytics", err);

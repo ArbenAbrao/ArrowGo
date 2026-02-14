@@ -54,7 +54,7 @@ export default function Settings({ darkMode }) {
 
     const fetchUser = async () => {
       try {
-        const { data } = await axios.get(`https://tmvasm.arrowgo-logistics.com/api/accounts/${storedUser.id}`);
+        const { data } = await axios.get(`http://192.168.254.126:5000/api/accounts/${storedUser.id}`);
         setUser(data);
         setProfile({
           firstName: data.first_name,
@@ -84,7 +84,7 @@ export default function Settings({ darkMode }) {
   /* ================= UPDATE PROFILE ================= */
   const handleProfileSave = async () => {
     try {
-      await axios.put(`https://tmvasm.arrowgo-logistics.com/api/accounts/${user.id}`, profile);
+      await axios.put(`http://192.168.254.126:5000/api/accounts/${user.id}`, profile);
 
       const updatedUser = { ...user, ...profile };
       localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -106,7 +106,7 @@ export default function Settings({ darkMode }) {
     }
 
     try {
-      await axios.put(`https://tmvasm.arrowgo-logistics.com/api/accounts/${user.id}/change-password`, {
+      await axios.put(`http://192.168.254.126:5000/api/accounts/${user.id}/change-password`, {
         currentPassword: passwords.current,
         newPassword: passwords.next,
       });

@@ -65,7 +65,7 @@ const [selectedBranch, setSelectedBranch] = useState("");
   // ---------- Fetch Data ----------
 const fetchTrucks = async () => {
   try {
-    const res = await axios.get("https://tmvasm.arrowgo-logistics.com/api/trucks");
+    const res = await axios.get("http://192.168.254.126:5000/api/trucks");
     setTrucks(res.data);
   } catch (err) {
     console.error(err);
@@ -74,7 +74,7 @@ const fetchTrucks = async () => {
 
 const fetchClients = async () => {
   try {
-    const res = await axios.get("https://tmvasm.arrowgo-logistics.com/api/clients");
+    const res = await axios.get("http://192.168.254.126:5000/api/clients");
     setClients(res.data);
   } catch (err) {
     console.error(err);
@@ -119,7 +119,7 @@ const fetchClients = async () => {
 const handleRegisterSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.post("https://tmvasm.arrowgo-logistics.com/api/register-truck", registerForm);
+    await axios.post("http://192.168.254.126:5000/api/register-truck", registerForm);
     await fetchTrucks();
 
     setRegisterForm({
@@ -163,7 +163,7 @@ const handleRegisterSubmit = async (e) => {
   const handleAddSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.post("https://tmvasm.arrowgo-logistics.com/api/add-truck", addForm);
+    await axios.post("http://192.168.254.126:5000/api/add-truck", addForm);
     fetchTrucks();
     setIsAddModalOpen(false);
     setAddForm({
@@ -195,7 +195,7 @@ const handleTimeIn = async (truck) => {
       minute: "2-digit",
     });
 
-    await axios.put(`https://tmvasm.arrowgo-logistics.com/api/trucks/${truck.id}/timein`, {
+    await axios.put(`http://192.168.254.126:5000/api/trucks/${truck.id}/timein`, {
       date,
       timeIn,
     });
@@ -218,7 +218,7 @@ const handleTimeOut = async (truck) => {
     const timeout = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const timeOutDate = now.toISOString(); // Save full date for reference
 
-    await axios.put(`/api/trucks/${truck.id}/timeout`, {
+    await axios.put(`http://192.168.254.126:5000/api/trucks/${truck.id}/timeout`, {
       timeOut: timeout,
       timeOutDate, // send date to backend
     });
@@ -256,7 +256,7 @@ const handleEditChange = (e) => {
 const handleEditSubmit = async (e) => {
   e.preventDefault();
   try {
-    const res = await axios.put(`https://tmvasm.arrowgo-logistics.com/api/trucks/${editModal.truck.id}`, {
+    const res = await axios.put(`http://192.168.254.126:5000/api/trucks/${editModal.truck.id}`, {
       driver: editModal.truck.driver,
       purpose: editModal.truck.purpose,
       bay: editModal.truck.bay,
@@ -278,7 +278,7 @@ const handleEditSubmit = async (e) => {
 // Delete truck
 const handleDeleteConfirm = async () => {
   try {
-    await axios.delete(`https://tmvasm.arrowgo-logistics.com/api/trucks/${deleteModal.truckId}`);
+    await axios.delete(`http://192.168.254.126:5000/api/trucks/${deleteModal.truckId}`);
     setTrucks((prev) => prev.filter((t) => t.id !== deleteModal.truckId));
     handleDeleteClose();
   } catch (err) {
@@ -331,7 +331,7 @@ const exportCompleteCSV = () => {
  
 
   useEffect(() => {
-    axios.get("https://tmvasm.arrowgo-logistics.com/api/branches").then((res) => setBranches(res.data));
+    axios.get("http://192.168.254.126:5000/api/branches").then((res) => setBranches(res.data));
   }, []);
 
 
