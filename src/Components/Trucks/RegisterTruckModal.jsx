@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeCanvas } from "qrcode.react";
 import axios from "axios";
 
-const API = "https://tmvasbackend.arrowgo-logistics.com/api";
+const API = "http://192.168.100.206:5000/api";
 
 export default function RegisterTruckModal({
   open,

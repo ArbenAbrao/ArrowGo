@@ -23,8 +23,8 @@ export default function BranchesChart({ darkMode, trucks = [] }) {
     const fetchData = async () => {
       try {
         const [branchesRes, clientsRes] = await Promise.all([
-          axios.get("https://tmvasbackend.arrowgo-logistics.com/api/branches"),
-          axios.get("https://tmvasbackend.arrowgo-logistics.com/api/branch-clients")
+          axios.get("http://192.168.100.206:5000/api/branches"),
+          axios.get("http://192.168.100.206:5000/api/branch-clients")
         ]);
         setBranches(branchesRes.data);
         setClients(clientsRes.data);

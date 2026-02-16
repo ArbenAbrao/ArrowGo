@@ -42,7 +42,7 @@ const handleSubmit = async (e) => {
     // Combine 12-hour time into string
     const formattedTime = `${form.hour}:${form.minute} ${form.ampm}`;
 
-    const res = await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests", {
+    const res = await axios.post("http://192.168.100.206:5000/api/appointment-requests", {
       visitorName: form.visitorName,
       company: form.company,
       personToVisit: form.personToVisit,

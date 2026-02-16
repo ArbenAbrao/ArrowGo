@@ -26,10 +26,10 @@ export default function Dashboard({ darkMode }) {
       try {
         const [truckRes, visitorRes, clientRes, appointmentRes] =
           await Promise.all([
-            axios.get("https://tmvasbackend.arrowgo-logistics.com/api/trucks"),
-            axios.get("https://tmvasbackend.arrowgo-logistics.com/api/visitors"),
-            axios.get("https://tmvasbackend.arrowgo-logistics.com/api/clients"),
-            axios.get("https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests"),
+            axios.get("http://192.168.100.206:5000/api/trucks"),
+            axios.get("http://192.168.100.206:5000/api/visitors"),
+            axios.get("http://192.168.100.206:5000/api/clients"),
+            axios.get("http://192.168.100.206:5000/api/appointment-requests"),
           ]);
 
         setTrucks(truckRes.data);

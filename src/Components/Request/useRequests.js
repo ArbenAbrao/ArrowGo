@@ -8,8 +8,8 @@ export default function useRequests() {
 
   const loadRequests = async () => {
     try {
-      const resTruck = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/truck-requests");
-      const resAppointment = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests");
+      const resTruck = await axios.get("http://192.168.100.206:5000/api/truck-requests");
+      const resAppointment = await axios.get("http://192.168.100.206:5000/api/appointment-requests");
 
       const formattedTruck = resTruck.data.map(r => ({
         id: r.id,
@@ -53,13 +53,13 @@ export default function useRequests() {
   const approve = async (req) => {
     try {
       if (req.type === "truck") {
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/truck-requests/${req.id}/approve`);
-        await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/register-truck", req.data);
+        await axios.put(`http://192.168.100.206:5000/api/truck-requests/${req.id}/approve`);
+        await axios.post("http://192.168.100.206:5000/api/register-truck", req.data);
       }
 
       if (req.type === "appointment") {
         // ✅ ONLY approve appointment
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests/${req.id}/approve`);
+        await axios.put(`http://192.168.100.206:5000/api/appointment-requests/${req.id}/approve`);
         // ❌ NO visitors insert here anymore
       }
 
@@ -75,9 +75,9 @@ export default function useRequests() {
   const reject = async (id, type) => {
     try {
       if (type === "truck") {
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/truck-requests/${id}/reject`);
+        await axios.put(`http://192.168.100.206:5000/api/truck-requests/${id}/reject`);
       } else {
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests/${id}/reject`);
+        await axios.put(`http://192.168.100.206:5000/api/appointment-requests/${id}/reject`);
       }
       loadRequests();
     } catch (err) {

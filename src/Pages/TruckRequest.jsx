@@ -5,7 +5,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import { FaFacebookF, FaInstagram, FaTwitter } from "react-icons/fa";
 import axios from "axios";
 
-const API = "https://tmvasbackend.arrowgo-logistics.com/api"; // your backend
+const API = "http://192.168.100.206:5000/api"; // your backend
 
 export default function TruckRequest() {
   const [form, setForm] = useState({
@@ -95,7 +95,7 @@ export default function TruckRequest() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("/api/truck-requests", form);
+      await axios.post("http://192.168.100.206:5000/api/truck-requests", form);
       setIsSubmitted(true);
       setForm({
         plateNumber: "",

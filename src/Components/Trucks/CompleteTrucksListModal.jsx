@@ -112,7 +112,7 @@ export default function CompleteTrucksListModal({
     if (!selectedIds.length) return;
     if (!window.confirm(`Delete ${selectedIds.length} selected trucks?`)) return;
     try {
-      await Promise.all(selectedIds.map((id) => axios.delete(`https://tmvasbackend.arrowgo-logistics.com/api/trucks/${id}`)));
+      await Promise.all(selectedIds.map((id) => axios.delete(`http://192.168.100.206:5000/api/trucks/${id}`)));
       setTrucks((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
       setSelectedIds([]);
       setCurrentPage(1);

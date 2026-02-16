@@ -27,7 +27,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
     if (!truck) return;
     const fetchTruckLogs = async () => {
       try {
-        const res = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/trucks");
+        const res = await axios.get("http://192.168.100.206:5000/api/trucks");
         const truckLogs = res.data.filter(t => t.plateNumber === truck.plateNumber);
         setLogs(truckLogs);
       } catch (err) {
@@ -42,7 +42,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
     if (!truck.clientTruckId) {
       const fetchClientId = async () => {
         try {
-          const res = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/clients");
+          const res = await axios.get("http://192.168.100.206:5000/api/clients");
           const client = res.data.find(c => c.plateNumber === truck.plateNumber);
           if (client) truck.clientTruckId = client.id;
         } catch (err) {
@@ -94,7 +94,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
       const formData = new FormData();
       formData.append("truckImage", file);
       const res = await axios.put(
-        `https://tmvasbackend.arrowgo-logistics.com/api/clients/${truckId}/upload-image`,
+        `http://192.168.100.206:5000/api/clients/${truckId}/upload-image`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -397,51 +397,96 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
 
                 {/* HIDDEN EXPORT LAYOUT */}
                 <div
-                  ref={exportRef}
-                  style={{
-                    position: "absolute",
-                    left: "-9999px",
-                    top: "0",
-                    width: "210mm",
-                    height: "297mm",
-                    background: "#fff",
-                    padding: "40px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    borderRadius: "12px",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <img
-                    src="/logo11.png"
-                    alt="Logo"
-                    style={{ width: "120px", height: "120px", objectFit: "contain", marginBottom: "32px" }}
-                  />
-                  <h2 style={{ fontSize: "3.8rem", fontWeight: "bold", textAlign: "center", marginBottom: "16px" }}>
-                    {truck.clientName || '("Client Name")'}
-                  </h2>
-                  <div style={{ fontSize: "2.5rem", fontWeight: "bold", textAlign: "center", marginBottom: "32px" }}>
-                    Vehicle ID
-                  </div>
-                  <div style={{ fontSize: "4.5rem", fontWeight: "bold", textAlign: "center", marginBottom: "32px" }}>
-                    {truck.clientTruckId || "—"}
-                  </div>
-                  <div style={{ fontSize: "4.5rem", fontWeight: "bold", textAlign: "center", marginBottom: "32px" }}>
-                  </div><div style={{ fontSize: "4.5rem", fontWeight: "bold", textAlign: "center", marginBottom: "32px" }}>
-                  </div>
-                  <div style={{ display: "flex", gap: "40px", justifyContent: "center", alignItems: "center" }}>
-                    <img
-                      src={imagePreview || truck.imageUrl || "/images/truck-placeholder.png"}
-                      alt="Truck"
-                      style={{ width: "200px", height: "200px", objectFit: "cover", borderRadius: "12px", border: "1px solid #ccc" }}
-                    />
-                    <QRCodeCanvas
-                      value={`${FRONTEND_URL}/truck-details/${truck.plateNumber}`}
-                      size={200}
-                    />
-                  </div>
-                </div>
+  ref={exportRef}
+  style={{
+    position: "absolute",
+    left: "-9999px",
+    top: "0",
+    width: "210mm",
+    height: "297mm",
+    background: "#fff",
+    padding: "40px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    borderRadius: "12px",
+    boxSizing: "border-box",
+    color: "#000", // ✅ FORCE ALL TEXT TO BLACK
+  }}
+>
+  <img
+    src="/logo11.png"
+    alt="Logo"
+    style={{
+      width: "120px",
+      height: "120px",
+      objectFit: "contain",
+      marginBottom: "32px"
+    }}
+  />
+
+  <h2
+    style={{
+      fontSize: "3.8rem",
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: "16px",
+      color: "#000"
+    }}
+  >
+    {truck.clientName || '("Client Name")'}
+  </h2>
+
+  <div
+    style={{
+      fontSize: "2.5rem",
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: "32px",
+      color: "#000"
+    }}
+  >
+    Vehicle ID
+  </div>
+
+  <div
+    style={{
+      fontSize: "4.5rem",
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: "32px",
+      color: "#000"
+    }}
+  >
+    {truck.clientTruckId || "—"}
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "40px",
+      justifyContent: "center",
+      alignItems: "center"
+    }}
+  >
+    <img
+      src={imagePreview || truck.imageUrl || "/images/truck-placeholder.png"}
+      alt="Truck"
+      style={{
+        width: "200px",
+        height: "200px",
+        objectFit: "cover",
+        borderRadius: "12px",
+        border: "1px solid #ccc"
+      }}
+    />
+
+    <QRCodeCanvas
+      value={`${FRONTEND_URL}/truck-details/${truck.plateNumber}`}
+      size={200}
+    />
+  </div>
+</div>
               </motion.div>
             )}
           </AnimatePresence>
