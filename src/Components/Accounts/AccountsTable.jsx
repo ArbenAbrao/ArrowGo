@@ -72,7 +72,7 @@ export default function AccountsTable({
     try {
       setUpdatingRole((prev) => ({ ...prev, [accId]: true }));
 
-      const res = await fetch(`http://192.168.100.206:5000/api/admin/accounts/${accId}/role`, {
+      const res = await fetch(`https://tmvasbackend.arrowgo-logistics.com/api/admin/accounts/${accId}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
@@ -156,9 +156,10 @@ export default function AccountsTable({
           }`}
         >
           <option value="All">All Roles</option>
-          <option value="Admin">Admin</option>
-          <option value="User">User</option>
-          <option value="IT">IT</option>
+<option value="Admin">Admin</option>
+<option value="User">User</option>
+<option value="IT">IT</option>
+<option value="Client">Client</option>
         </select>
       </div>
 
@@ -228,10 +229,10 @@ export default function AccountsTable({
                         : "bg-white text-gray-900 border-gray-300"
                     }`}
                   >
-                    {["Admin", "User", "IT"].map((role) => (
+                    {["Admin", "User", "IT", "Client"].map((role) => (
                       <option key={role} value={role}>
                         {role}
-                      </option>
+                      </option> 
                     ))}
                   </select>
                 </td>
@@ -387,11 +388,11 @@ export default function AccountsTable({
                                 : "bg-white text-gray-900 border-gray-300"
                             }`}
                           >
-                            {["Admin", "User", "IT"].map((role) => (
-                              <option key={role} value={role}>
-                                {role}
-                              </option>
-                            ))}
+                            {["Admin", "User", "IT", "Client"].map((role) => (
+  <option key={role} value={role}>
+    {role}
+  </option>
+))}
                           </select>
                         </span>
                       </div>

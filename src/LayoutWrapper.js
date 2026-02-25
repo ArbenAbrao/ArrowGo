@@ -23,6 +23,7 @@ import TruckDetails from "./Pages/TruckDetails";
 import Settings from "./Pages/Settings";
 import Branches from "./Pages/Branches";
 import VehicleManagement from "./Pages/VehicleManagement";
+import Walkins from "./Pages/Walkins";
 
 export default function LayoutWrapper() {
   const location = useLocation();
@@ -41,7 +42,9 @@ export default function LayoutWrapper() {
     location.pathname === "/" ||
     location.pathname === "/appointment" ||
     location.pathname === "/truck-request" ||
+    location.pathname === "/walkins" ||
     location.pathname.startsWith("/truck-details");
+    
 
   /* ===============================
      HANDLE WINDOW RESIZE
@@ -100,6 +103,7 @@ export default function LayoutWrapper() {
             path="/truck-details/:plateNumber"
             element={<TruckDetails />}
           />
+          <Route path="/walkins" element={<Walkins />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
@@ -140,49 +144,49 @@ export default function LayoutWrapper() {
           <AnimatePresence mode="sync">
             <Routes location={location} key={location.pathname}>
               <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
-                    <Dashboard darkMode={darkMode} />
-                  </ProtectedRoute>
-                }
-              />
+  path="/dashboard"
+  element={
+    <ProtectedRoute allowedRoles={["user", "admin", "client", "it"]}>
+      <Dashboard darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
 
-              <Route
-                path="/trucks"
-                element={
-                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
-                    <Trucks darkMode={darkMode} />
-                  </ProtectedRoute>
-                }
-              />
+<Route
+  path="/trucks"
+  element={
+    <ProtectedRoute allowedRoles={["user", "admin", "client", "it"]}>
+      <Trucks darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
 
-              <Route
-                path="/visitors"
-                element={
-                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
-                    <Visitors darkMode={darkMode} />
-                  </ProtectedRoute>
-                }
-              />
+<Route
+  path="/visitors"
+  element={
+    <ProtectedRoute allowedRoles={["user", "admin", "client", "it"]}>
+      <Visitors darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
 
-              <Route
-                path="/requests"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "it"]}>
-                    <Request darkMode={darkMode} />
-                  </ProtectedRoute>
-                }
-              />
+<Route
+  path="/requests"
+  element={
+    <ProtectedRoute allowedRoles={["admin", "it"]}>
+      <Request darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
 
-              <Route
-                path="/vehicle-management"
-                element={
-                  <ProtectedRoute allowedRoles={["admin", "it"]}>
-                    <VehicleManagement darkMode={darkMode} />
-                  </ProtectedRoute>
-                }
-              />
+<Route
+  path="/vehicle-management"
+  element={
+    <ProtectedRoute allowedRoles={["admin", "client", "it"]}>
+      <VehicleManagement darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
 
               <Route
                 path="/branches"
@@ -203,13 +207,13 @@ export default function LayoutWrapper() {
               />
 
               <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute allowedRoles={["user", "admin", "it"]}>
-                    <Settings darkMode={darkMode} />
-                  </ProtectedRoute>
-                }
-              />
+  path="/settings"
+  element={
+    <ProtectedRoute allowedRoles={["user", "admin", "client", "it"]}>
+      <Settings darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

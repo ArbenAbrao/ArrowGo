@@ -16,6 +16,8 @@ import PaginationControls from "../Components/Trucks/PaginationControls";
 
 export default function Trucks({ darkMode }) {
   // ---------- States ----------
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const userRole = storedUser?.role || "";
   const [trucks, setTrucks] = useState([]);
   const [clients, setClients] = useState([]);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -27,6 +29,9 @@ export default function Trucks({ darkMode }) {
   const [isRegisteredModalOpen, setIsRegisteredModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState("");
   const [isCompleteListModalOpen, setIsCompleteListModalOpen] = useState(false);
+  const occupiedBays = trucks
+  .filter((t) => !t.timeOut)
+  .map((t) => t.bay);
 
   const allBays = Array.from({ length: 10 }, (_, i) => [`${i + 1}a`, `${i + 1}b`]).flat();
 
@@ -49,6 +54,7 @@ export default function Trucks({ darkMode }) {
   truckType: "",
   clientName: "",
   branchRegistered: "",
+  destinationBranch: "",
   bay: "",
   driver: "",
   purpose: "",
@@ -65,7 +71,7 @@ const [selectedBranch, setSelectedBranch] = useState("");
   // ---------- Fetch Data ----------
 const fetchTrucks = async () => {
   try {
-    const res = await axios.get("http://192.168.100.206:5000/api/trucks");
+    const res = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/trucks");
     setTrucks(res.data);
   } catch (err) {
     console.error(err);
@@ -74,7 +80,7 @@ const fetchTrucks = async () => {
 
 const fetchClients = async () => {
   try {
-    const res = await axios.get("http://192.168.100.206:5000/api/clients");
+    const res = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/clients");
     setClients(res.data);
   } catch (err) {
     console.error(err);
@@ -108,7 +114,7 @@ const fetchClients = async () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-  const occupiedBays = trucks.filter((t) => !t.timeOut).map((t) => t.bay);
+  const activeTrucks = trucks.filter((t) => !t.timeOut);
 
   // ---------- Handlers ----------
   const handleRegisterChange = (e) => {
@@ -119,7 +125,7 @@ const fetchClients = async () => {
 const handleRegisterSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.post("http://192.168.100.206:5000/api/register-truck", registerForm);
+    await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/register-truck", registerForm);
     await fetchTrucks();
 
     setRegisterForm({
@@ -163,7 +169,7 @@ const handleRegisterSubmit = async (e) => {
   const handleAddSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.post("http://192.168.100.206:5000/api/add-truck", addForm);
+    await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/add-truck", addForm);
     fetchTrucks();
     setIsAddModalOpen(false);
     setAddForm({
@@ -172,6 +178,7 @@ const handleRegisterSubmit = async (e) => {
   truckType: "",
   clientName: "",
   branchRegistered: "",
+  destinationBranch: "", // 👈 ADD THIS
   bay: "",
   driver: "",
   purpose: "",
@@ -195,7 +202,7 @@ const handleTimeIn = async (truck) => {
       minute: "2-digit",
     });
 
-    await axios.put(`http://192.168.100.206:5000/api/trucks/${truck.id}/timein`, {
+    await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/trucks/${truck.id}/timein`, {
       date,
       timeIn,
     });
@@ -218,7 +225,7 @@ const handleTimeOut = async (truck) => {
     const timeout = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const timeOutDate = now.toISOString(); // Save full date for reference
 
-    await axios.put(`http://192.168.100.206:5000/api/trucks/${truck.id}/timeout`, {
+    await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/trucks/${truck.id}/timeout`, {
       timeOut: timeout,
       timeOutDate, // send date to backend
     });
@@ -256,7 +263,7 @@ const handleEditChange = (e) => {
 const handleEditSubmit = async (e) => {
   e.preventDefault();
   try {
-    const res = await axios.put(`http://192.168.100.206:5000/api/trucks/${editModal.truck.id}`, {
+    const res = await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/trucks/${editModal.truck.id}`, {
       driver: editModal.truck.driver,
       purpose: editModal.truck.purpose,
       bay: editModal.truck.bay,
@@ -278,7 +285,7 @@ const handleEditSubmit = async (e) => {
 // Delete truck
 const handleDeleteConfirm = async () => {
   try {
-    await axios.delete(`http://192.168.100.206:5000/api/trucks/${deleteModal.truckId}`);
+    await axios.delete(`https://tmvasbackend.arrowgo-logistics.com/api/trucks/${deleteModal.truckId}`);
     setTrucks((prev) => prev.filter((t) => t.id !== deleteModal.truckId));
     handleDeleteClose();
   } catch (err) {
@@ -331,7 +338,7 @@ const exportCompleteCSV = () => {
  
 
   useEffect(() => {
-    axios.get("http://192.168.100.206:5000/api/branches").then((res) => setBranches(res.data));
+    axios.get("https://tmvasbackend.arrowgo-logistics.com/api/branches").then((res) => setBranches(res.data));
   }, []);
 
 
@@ -385,44 +392,48 @@ const exportCompleteCSV = () => {
   </select>
 
   {/* Add Truck Button */}
+{(userRole === "Admin" || userRole === "IT" || userRole === "User") && (
   <button
     onClick={() => setIsAddModalOpen(true)}
     className={`
       px-4 py-2 rounded-md text-sm transition
-      ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+      ${darkMode 
+        ? "bg-green-600 hover:bg-green-700 text-white" 
+        : "bg-green-500 hover:bg-green-600 text-white"}
+    `}
   >
-    Add Truck
+    Create Time In
   </button>
+)}
 
-  {/* Completed Vehicle List Button */}
-  <button
-    onClick={() => setIsCompleteListModalOpen(true)}
-    className={`
-      px-4 py-2 rounded-md text-sm transition
-      ${darkMode ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-indigo-500 hover:bg-indigo-600 text-white"}`}
-  >
-    Completed Vehicle List
-  </button>
+{/* Completed Vehicle List Button */}
+<button
+  onClick={() => setIsCompleteListModalOpen(true)}
+  className={`
+    px-4 py-2 rounded-md text-sm transition
+    ${darkMode 
+      ? "bg-indigo-600 hover:bg-indigo-700 text-white" 
+      : "bg-indigo-500 hover:bg-indigo-600 text-white"}
+  `}
+>
+  Completed Vehicle List
+</button>
+
 </div>
 
 
 
 
-            
-
-
-
 <TruckGrid
   paginatedTrucks={paginatedTrucks}
-    selectedBranch={selectedBranch} // 🔥 THIS
-
+  selectedBranch={selectedBranch}
   darkMode={darkMode}
-  handleTimeIn={handleTimeIn}   // ✅ NEW
+  handleTimeIn={handleTimeIn}
   handleTimeOut={handleTimeOut}
   handleEditOpen={handleEditOpen}
   handleDeleteOpen={handleDeleteOpen}
+  userRole={userRole}
 />
-
 
 <PaginationControls
   darkMode={darkMode}
@@ -459,6 +470,7 @@ const exportCompleteCSV = () => {
         bays={allBays}
         occupiedBays={occupiedBays}
         darkMode={darkMode}
+        activeTrucks={activeTrucks}
       />
       <CompleteTrucksListModal
         open={isCompleteListModalOpen}

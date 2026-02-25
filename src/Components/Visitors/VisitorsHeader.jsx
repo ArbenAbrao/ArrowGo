@@ -9,11 +9,10 @@ export default function VisitorsHeader({
   visitors,
   selectedBranch,
   setSelectedBranch,
-
-  // 🔽 Search props
   searchTerm,
   setSearchTerm,
   inputBg,
+  userRole,   // ✅ add this
 }) {
   const [branches, setBranches] = useState([]);
   const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
@@ -110,20 +109,24 @@ export default function VisitorsHeader({
         >
           <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-2 md:mt-0">
             {/* Appointment Requests */}
-            <button
-              onClick={() => setIsAppointmentModalOpen(true)}
-              className="px-4 py-2 rounded-lg bg-yellow-500 text-white"
-            >
-              Appointment Requests ({appointmentRequests.length})
-            </button>
+{(userRole === "Admin" || userRole === "IT") && (
+  <button
+    onClick={() => setIsAppointmentModalOpen(true)}
+    className="px-4 py-2 rounded-lg bg-yellow-500 text-white"
+  >
+    Appointment Requests ({appointmentRequests.length})
+  </button>
+)}
 
-            {/* Add Visitor */}
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="px-4 py-2 rounded-lg bg-blue-500 text-white"
-            >
-              Add Visitor
-            </button>
+{/* Add Visitor */}
+{(userRole === "Admin" || userRole === "IT") && (
+  <button
+    onClick={() => setIsAddModalOpen(true)}
+    className="px-4 py-2 rounded-lg bg-blue-500 text-white"
+  >
+    Add Visitor
+  </button>
+)}
 
             {/* View Completed Visitors */}
             <button

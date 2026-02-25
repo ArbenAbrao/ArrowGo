@@ -4,6 +4,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 /* ================= SEARCH BAR ================= */
+
 function SearchBar({ searchTerm, setSearchTerm, darkMode }) {
   return (
     <div className="w-full">
@@ -68,7 +69,7 @@ function ActionSection({
   const contentRef = useRef(null);
 
   useEffect(() => {
-    axios.get("http://192.168.100.206:5000/api/branches").then((res) => setBranches(res.data));
+    axios.get("https://tmvasbackend.arrowgo-logistics.com/api/branches").then((res) => setBranches(res.data));
   }, []);
 
   return (
@@ -106,7 +107,7 @@ function ActionSection({
                 : "bg-green-500 hover:bg-green-600 text-white"
             }`}
           >
-            Register Truck
+            Register Vehicle
           </button>
 
           
@@ -119,7 +120,7 @@ function ActionSection({
                 : "bg-blue-500 hover:bg-blue-600 text-white"
             }`}
           >
-            Create Appointment
+            Create Time in
           </button>
 
         

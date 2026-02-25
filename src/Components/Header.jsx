@@ -47,61 +47,60 @@ const role = (user.role || "").trim().toLowerCase();
     icon: HiOutlineViewGrid,
     label: "Dashboard",
     path: "/dashboard",
-    roles: ["user", "admin", "it"],
+    roles: ["user", "admin", "client", "it"], // added client
     color: "text-white-400",
   },
   {
     icon: HiOutlineTruck,
     label: "Vehicle In's & out's",
     path: "/trucks",
-    roles: ["user", "admin", "it"],
+    roles: ["user", "admin", "client", "it"], // added client
     color: "text-white-400",
   },
   {
     icon: HiOutlineUser,
     label: "Visitors",
     path: "/visitors",
-    roles: ["user", "admin", "it"],
+    roles: ["user", "admin", "client", "it"], // added client
     color: "text-white-400",
   },
   {
     icon: HiOutlineClipboardList,
     label: "Requests",
     path: "/requests",
-    roles: ["admin", "it"],
+    roles: ["admin", "it"], // added client
     badge: requestCount,
     color: "text-white-400",
   },
   {
-  icon: HiOutlineTruck,
-  label: "Vehicle Management",
-  path: "/vehicle-management",
-  roles: ["admin", "it"], // 🔐 ONLY Admin & IT
-  color: "text-white-400",
-},
+    icon: HiOutlineTruck,
+    label: "Vehicle Management",
+    path: "/vehicle-management",
+    roles: ["admin", "client", "it"], // added client
+    color: "text-white-400",
+  },
   {
-  icon: HiOutlineOfficeBuilding,
-  label: "Branch / Clients",
-  path: "/branches",
-  roles: ["it"],
-  color: "text-white-400",
-},
+    icon: HiOutlineOfficeBuilding,
+    label: "Branch / Clients",
+    path: "/branches",
+    roles: ["it"], // leave as IT only
+    color: "text-white-400",
+  },
   {
     icon: HiOutlineUser,
     label: "Accounts",
     path: "/accounts",
-    roles: ["it"],
+    roles: ["it"], // leave as IT only
     color: "text-white-400",
   },
   {
     icon: HiOutlineCog,
     label: "Settings",
     path: "/settings",
-    roles: ["user", "admin", "it"],
+    roles: ["user", "admin", "client", "it"], // added client
     color: "text-white-300",
   },
 ];
-
 
   const side = isDesktop ? "left" : "right";
 

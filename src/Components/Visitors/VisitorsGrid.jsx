@@ -15,7 +15,8 @@ export default function VisitorsGrid({
    * 
    * 
    */
-
+const storedUser = JSON.parse(localStorage.getItem("user"));
+  const userRole = storedUser?.role || "";
   
   const timedInVisitors = currentVisitors.filter(
   (v) =>
@@ -34,13 +35,13 @@ export default function VisitorsGrid({
 
       {timedInVisitors.map((visitor) => (
         <VisitorCard
-          key={visitor.id}
-          visitor={visitor}
-          darkMode={darkMode}
-          handleEditOpen={handleEditOpen}
-          handleDeleteOpen={handleDeleteOpen}
-          handleTimeOut={handleTimeOut}
-        />
+  visitor={visitor}
+  darkMode={darkMode}
+  handleEditOpen={handleEditOpen}
+  handleDeleteOpen={handleDeleteOpen}
+  handleTimeOut={handleTimeOut}
+  userRole={userRole}
+/>
       ))}
     </div>
   );

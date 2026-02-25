@@ -28,6 +28,10 @@ export default function VehicleManagement({ darkMode }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [filterDate, setFilterDate] = useState(null);
 
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+const userRole = storedUser?.role || "";
+const canManage = userRole === "Admin" || userRole === "IT";
+
   // Modals
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isRegisteredModalOpen, setIsRegisteredModalOpen] = useState(false);
@@ -63,6 +67,8 @@ export default function VehicleManagement({ darkMode }) {
     timeIn: null,
   });
 
+
+  
   /* ================= CONSTANTS ================= */
   const ITEMS_PER_PAGE = 7;
 
@@ -70,28 +76,28 @@ export default function VehicleManagement({ darkMode }) {
     [`${i + 1}a`, `${i + 1}b`]
   ).flat();
 
-  const occupiedBays = useMemo(
-    () => trucks.filter((t) => !t.timeOut).map((t) => t.bay),
-    [trucks]
-  );
+  const occupiedBays = trucks
+  .filter((t) => !t.timeOut)
+  .map((t) => t.bay);
+  const activeTrucks = trucks.filter((t) => !t.timeOut);
 
   /* ================= FETCH ================= */
   useEffect(() => {
     // Get trucks
     axios
-      .get("http://192.168.100.206:5000/api/clients")
+      .get("https://tmvasbackend.arrowgo-logistics.com/api/clients")
       .then((res) => setTrucks(res.data.sort((a, b) => a.id - b.id)))
       .catch(console.error);
 
     // Get clients
     axios
-      .get("http://192.168.100.206:5000/api/clients")
+      .get("https://tmvasbackend.arrowgo-logistics.com/api/clients")
       .then((res) => setClients(res.data))
       .catch(console.error);
 
     // Get branches
     axios
-      .get("http://192.168.100.206:5000/api/branches")
+      .get("https://tmvasbackend.arrowgo-logistics.com/api/branches")
       .then((res) => setBranches(res.data))
       .catch(console.error);
   }, []);
@@ -174,7 +180,7 @@ export default function VehicleManagement({ darkMode }) {
 
   const deleteTruck = async (id) => {
     if (!window.confirm("Delete this truck?")) return;
-    await axios.delete(`http://192.168.100.206:5000/api/clients/${id}`);
+    await axios.delete(`https://tmvasbackend.arrowgo-logistics.com/api/clients/${id}`);
     setTrucks((prev) => prev.filter((t) => t.id !== id));
   };
 
@@ -190,13 +196,13 @@ export default function VehicleManagement({ darkMode }) {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    await axios.post("http://192.168.100.206:5000/api/register-truck", registerForm);
+    await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/register-truck", registerForm);
     setIsRegisterModalOpen(false);
   };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    await axios.post("http://192.168.100.206:5000/api/add-truck", addForm);
+    await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/add-truck", addForm);
     setIsAddModalOpen(false);
   };
 
@@ -313,7 +319,7 @@ export default function VehicleManagement({ darkMode }) {
                 <td className="border p-2">{t.plateNumber}</td>
                 <td className="border p-2 text-center">
                   <img
-                    src={`http://192.168.100.206:5000/api/clients/${t.id}/qrcode`}
+                    src={`https://tmvasbackend.arrowgo-logistics.com/api/clients/${t.id}/qrcode`}
                     alt={`QR code for truck ${t.plateNumber}`}
                     className="w-10 mx-auto cursor-pointer hover:scale-110 transition"
                     onClick={() => {
@@ -323,10 +329,12 @@ export default function VehicleManagement({ darkMode }) {
                   />
                 </td>
                 <td className="border p-2 text-center">
-                  <button onClick={() => deleteTruck(t.id)}>
-                    <TrashIcon className="w-5 text-red-600" />
-                  </button>
-                </td>
+  {canManage && (
+    <button onClick={() => deleteTruck(t.id)}>
+      <TrashIcon className="w-5 text-red-600 hover:scale-110 transition" />
+    </button>
+  )}
+</td>
               </tr>
             ))}
           </tbody>
@@ -370,7 +378,7 @@ export default function VehicleManagement({ darkMode }) {
 
             <div className="flex justify-between items-center mt-4">
               <img
-                src={`http://192.168.100.206:5000/api/clients/${t.id}/qrcode`}
+                src={`https://tmvasbackend.arrowgo-logistics.com/api/clients/${t.id}/qrcode`}
                 alt={`QR code for truck`}
                 className="w-12 cursor-pointer hover:scale-110 transition"
                 onClick={() => {
@@ -379,12 +387,18 @@ export default function VehicleManagement({ darkMode }) {
                 }}
               />
 
-              <button
-                onClick={() => deleteTruck(t.id)}
-                className="p-2 rounded-lg bg-red-50 text-red-600"
-              >
-                <TrashIcon className="w-5" />
-              </button>
+              {canManage && (
+  <button
+  disabled={!canManage}
+  className={`p-2 rounded-lg ${
+    canManage
+      ? "bg-red-50 text-red-600 hover:scale-110"
+      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+  }`}
+>
+    <TrashIcon className="w-5" />
+  </button>
+)}
             </div>
           </div>
         ))}
@@ -430,6 +444,7 @@ export default function VehicleManagement({ darkMode }) {
         bays={allBays}
         occupiedBays={occupiedBays}
         darkMode={darkMode}
+        activeTrucks={activeTrucks}
       />
 
       <CompleteTrucksListModal

@@ -5,7 +5,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import { FaFacebookF, FaInstagram, FaTwitter } from "react-icons/fa";
 import axios from "axios";
 
-const API = "http://192.168.100.206:5000/api"; // your backend
+const API = "https://tmvasbackend.arrowgo-logistics.com/api"; // your backend
 
 export default function TruckRequest() {
   const [form, setForm] = useState({
@@ -265,7 +265,7 @@ export default function TruckRequest() {
         >
           {/* Logo & Header */}
           <div className="flex justify-center mb-2">
-            <img src="/logo4.png" alt="Logo" className="h-14 w-14" />
+            <img src="/logo22.png" alt="Logo" className="h-12 sm:h-16 w-auto" />
           </div>
           <h2 className="text-center text-green-800 font-bold text-lg mb-3">
             ArrowGo Logistics Inc.

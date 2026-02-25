@@ -11,7 +11,7 @@ export default function AddTruckModal({
   onChange,
   clients,
   bays,
-  occupiedBays,
+  activeTrucks,
   darkMode = true,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(null);
@@ -95,7 +95,7 @@ export default function AddTruckModal({
                   className={`flex items-center gap-2 p-4 ${theme.headerBg} rounded-t-2xl`}
                 >
                   <TruckIcon className="w-6 h-6" />
-                  <Dialog.Title className="text-lg font-semibold">Add Truck</Dialog.Title>
+                  <Dialog.Title className="text-lg font-semibold">Create Time in</Dialog.Title>
                   <button onClick={onClose} className="ml-auto hover:opacity-80 transition">✕</button>
                 </motion.div>
 
@@ -117,7 +117,7 @@ export default function AddTruckModal({
     }
     className={`w-full border p-2 rounded text-left flex justify-between items-center ${theme.inputBg} ${theme.neonGlow}`}
   >
-    {form.branchRegistered || "Select Branch"}
+    {form.branchRegistered || "Select Registered Branch"}
     <ChevronDownIcon
       className={`w-5 h-5 ml-2 transition-transform ${
         dropdownOpen === "branch" ? "rotate-180" : ""
@@ -218,7 +218,7 @@ export default function AddTruckModal({
     }
     className={`w-full border p-2 rounded text-left flex justify-between items-center disabled:opacity-50 ${theme.inputBg} ${theme.neonGlow}`}
   >
-    {form.id || "Select Truck ID"}
+    {form.id || "Select Vehicle ID"}
     <ChevronDownIcon
       className={`w-5 h-5 ml-2 transition-transform ${dropdownOpen === "truckId" ? "rotate-180" : ""}`}
     />
@@ -267,7 +267,7 @@ export default function AddTruckModal({
                     transition={{ delay: 0.15 }}
                     readOnly
                     value={form.truckType || ""}
-                    placeholder="Truck Type"
+                    placeholder="Vehucle Type"
                     className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
                   />
 
@@ -282,64 +282,147 @@ export default function AddTruckModal({
                     placeholder="Plate Number"
                     className={`border p-2 w-full rounded ${theme.inputBg} ${theme.neonGlow}`}
                   />
+                  {/* Destination Branch Dropdown */}
+<motion.div
+  variants={inputVariants}
+  initial="hidden"
+  animate="visible"
+  transition={{ delay: 0.23 }}
+  className="relative"
+>
+  <button
+    type="button"
+    onClick={() =>
+      setDropdownOpen(dropdownOpen === "destination" ? null : "destination")
+    }
+    className={`w-full border p-2 rounded text-left flex justify-between items-center ${theme.inputBg} ${theme.neonGlow}`}
+  >
+    {form.destinationBranch || "Select Destination Branch"}
+    <ChevronDownIcon
+      className={`w-5 h-5 ml-2 transition-transform ${
+        dropdownOpen === "destination" ? "rotate-180" : ""
+      }`}
+    />
+  </button>
+
+  <AnimatePresence>
+    {dropdownOpen === "destination" && (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className={`absolute z-50 w-full rounded shadow-lg mt-1 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto ${theme.dropdownBg}`}
+      >
+        {[...new Set(clients.map(c => c.branchRegistered))].map((branch, i) => (
+          <span
+            key={i}
+            className={`px-3 py-1 rounded cursor-pointer text-sm ${theme.dropdownHover}`}
+            onClick={() => {
+              onChange({ target: { name: "destinationBranch", value: branch } });
+              setDropdownOpen(null);
+            }}
+          >
+            {branch}
+          </span>
+        ))}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
               
 
 
                   {/* Bay Dropdown */}
-                  <motion.div
-                    variants={inputVariants}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: 0.25 }}
-                    className="relative"
-                  >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDropdownOpen(dropdownOpen === "bay" ? null : "bay")
-                      }
-                      className={`w-full border p-2 rounded text-left flex justify-between items-center ${theme.inputBg} ${theme.neonGlow}`}
-                    >
-                      {form.bay || "Select Bay"}
-                      <ChevronDownIcon
-                        className={`w-5 h-5 ml-2 transition-transform ${dropdownOpen === "bay" ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    <AnimatePresence>
-                      {dropdownOpen === "bay" && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className={`absolute z-50 w-full rounded shadow-lg mt-1 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto ${theme.dropdownBg}`}
-                        >
-                          {bays.map(b => {
-                            const upper = b.toUpperCase();
-                            const occupied = occupiedBays.includes(b);
-                            return (
-                              <span
-                                key={b}
-                                className={`px-3 py-1 rounded cursor-pointer text-sm ${
-                                  occupied
-                                    ? "bg-gray-500 text-gray-200 cursor-not-allowed"
-                                    : `bg-gray-200 ${theme.dropdownHover}`
-                                }`}
-                                onClick={() => {
-                                  if (!occupied) {
-                                    onChange({ target: { name: "bay", value: upper } });
-                                    setDropdownOpen(null);
-                                  }
-                                }}
-                              >
-                                {upper} {occupied && "(OCCUPIED)"}
-                              </span>
-                            );
-                          })}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
+<motion.div
+  variants={inputVariants}
+  initial="hidden"
+  animate="visible"
+  transition={{ delay: 0.25 }}
+  className="relative"
+>
+  <button
+    type="button"
+    onClick={() =>
+      setDropdownOpen(dropdownOpen === "bay" ? null : "bay")
+    }
+    className={`w-full border p-2 rounded-lg text-left flex justify-between items-center transition-all
+      ${theme.inputBg}
+      ${theme.textColor}
+      ${theme.borderColor}
+      hover:ring-2 hover:ring-cyan-500
+    `}
+  >
+    {form.bay || "Select Bay"}
+    <ChevronDownIcon
+      className={`w-5 h-5 ml-2 transition-transform duration-200 ${
+        dropdownOpen === "bay" ? "rotate-180" : ""
+      }`}
+    />
+  </button>
+
+  <AnimatePresence>
+    {dropdownOpen === "bay" && (
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.2 }}
+        className={`absolute z-50 w-full rounded-lg shadow-xl mt-2 p-2 flex flex-wrap gap-2 max-h-60 overflow-y-auto border
+          ${theme.dropdownBg}
+          ${theme.borderColor}
+        `}
+      >
+        {bays.map((b) => {
+  const upper = b.toUpperCase();
+
+  // count active trucks in this bay
+  const bayCount = activeTrucks.filter(
+    (t) => t.bay && t.bay.toUpperCase() === upper
+  ).length;
+
+  const reachedMax = bayCount >= 2;
+  const selected = form.bay === upper;
+
+  return (
+    <div key={b} className="relative group">
+      <span
+        className={`px-3 py-1 rounded-md text-sm transition-all
+          ${
+            reachedMax
+              ? "bg-red-500/20 text-red-400 cursor-not-allowed"
+              : selected
+              ? "bg-cyan-500 text-white shadow-md"
+              : `cursor-pointer ${theme.optionBg} ${theme.dropdownHover}`
+          }
+        `}
+        onClick={() => {
+          if (!reachedMax) {
+            onChange({
+              target: { name: "bay", value: upper },
+            });
+            setDropdownOpen(null);
+          }
+        }}
+      >
+        {upper}
+        {reachedMax && " (FULL)"}
+      </span>
+
+      {/* Tooltip */}
+      {reachedMax && (
+        <div className="absolute hidden group-hover:block bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-1 text-xs rounded bg-black text-white shadow-lg z-50">
+          reach the maximum waiting qty.
+        </div>
+      )}
+    </div>
+  );
+})}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
+                    
 
                   {/* Driver */}
                   <motion.input

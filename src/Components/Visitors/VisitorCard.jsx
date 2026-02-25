@@ -10,7 +10,6 @@ import {
   TruckIcon,
   ClipboardDocumentListIcon,
   ChevronDownIcon,
-  BuildingOfficeIcon,
 } from "@heroicons/react/24/outline";
 
 /* ================= STATUS COLORS ================= */
@@ -57,6 +56,7 @@ export default function VisitorCard({
   handleEditOpen,
   handleDeleteOpen,
   handleTimeOut,
+  userRole,
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -64,116 +64,141 @@ export default function VisitorCard({
   const status = isActive ? "Active" : "Completed";
   const statusColor = STATUS_COLORS[status];
 
+  /* ================= ROLE PERMISSIONS ================= */
+  const canModify =
+    userRole === "Admin" || userRole === "IT" || userRole === "User";
+
   return (
     <div
       className={`w-full relative rounded-xl overflow-hidden border-2 mb-4 transition-all hover:shadow-lg hover:scale-[1.01]
       ${statusColor.border} ${darkMode ? "bg-gray-900" : "bg-white"}`}
     >
       {/* HEADER */}
-      <div
-        onClick={() => setIsOpen(!isOpen)}
-        className="px-4 py-3 flex flex-col sm:grid sm:grid-cols-12 gap-2 cursor-pointer"
+<div
+  onClick={() => setIsOpen(!isOpen)}
+  className="px-4 py-3 flex items-center justify-between gap-4 cursor-pointer overflow-hidden"
+>
+
+  {/* LEFT SIDE (All Info) */}
+  <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+
+    {/* STATUS */}
+    <span className="px-2 py-1 text-xs font-semibold rounded-full border flex items-center gap-1 shrink-0 h-6">
+      <span className={`w-2 h-2 rounded-full ${statusColor.dot}`} />
+      {status}
+    </span>
+
+    {/* BRANCH */}
+    {visitor.branch && (
+      <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-indigo-100 text-indigo-900 dark:bg-indigo-600 dark:text-indigo-100 shrink-0 h-6">
+        {visitor.branch}
+      </span>
+    )}
+
+    {/* BADGE */}
+    {visitor.badgeNumber && (
+      <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-amber-100 text-amber-900 dark:bg-amber-600 dark:text-white shrink-0 h-6">
+        {visitor.badgeNumber}
+      </span>
+    )}
+
+    {/* COMPANY */}
+    {visitor.company && (
+      <span
+        className={`px-2 py-1 text-xs font-semibold rounded-full border shrink-0 h-6 ${getCompanyColor(
+          visitor.company
+        )}`}
       >
-        {/* BADGES */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:col-span-2">
-          {/* STATUS */}
-          <span className="px-2 py-1 text-xs font-semibold rounded-full border flex items-center gap-1 h-6">
-            <span className={`w-2 h-2 rounded-full ${statusColor.dot}`} />
-            {status}
-          </span>
+        {visitor.company}
+      </span>
+    )}
 
-          {/* BRANCH */}
-          {visitor.branch && (
-            <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-indigo-100 text-indigo-900 dark:bg-indigo-600 dark:text-indigo-100 flex items-center gap-1 h-6">
-              <BuildingOfficeIcon className="w-3 h-3" />
-              {visitor.branch}
-            </span>
-          )}
-
-          {/* BADGE NUMBER */}
-          {visitor.badgeNumber && (
-            <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-amber-100 text-amber-900 dark:bg-amber-600 dark:text-white flex items-center gap-1 h-6">
-              <TagIcon className="w-3 h-3" />
-              {visitor.badgeNumber}
-            </span>
-          )}
-
-          {/* COMPANY - MOBILE ALIGN FIX */}
-          {visitor.company && (
-            <span
-              className={`px-2 py-1 text-xs font-semibold rounded-full border flex items-center gap-1 h-6 
-              ${getCompanyColor(visitor.company)}
-              sm:ml-0 w-full sm:w-auto text-center sm:text-left`}
-            >
-              <BuildingOfficeIcon className="w-3 h-3" />
-              {visitor.company}
-            </span>
-          )}
-        </div>
-
-        {/* RIGHT: VISITOR INFO + ACTIONS */}
-<div className="col-span-4 sm:col-span-10 flex justify-end items-center gap-2">
-  {/* VISITOR INFO */}
-  <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-shrink-0">
-    <div className="flex items-center gap-1">
+    {/* VISITOR NAME */}
+    <div className="flex items-center gap-1 min-w-0">
       <UserIcon className="w-4 h-4 text-cyan-500 shrink-0" />
-      <span className="text-xs text-gray-500">Visitor:</span>
-      <p className="truncate font-bold">{visitor.visitorName}</p>
+      <span className="font-bold truncate">
+        {visitor.visitorName}
+      </span>
     </div>
 
-    <div className="flex items-center gap-1">
-      <BuildingOfficeIcon className="w-4 h-4 text-gray-500 shrink-0" />
-      <span className="text-xs text-gray-500">Person:</span>
-      <span className="truncate">{visitor.personToVisit}</span>
+    {/* PERSON */}
+    <div className="flex items-center gap-1 min-w-0">
+      <UserIcon className="w-4 h-4 text-cyan-500 shrink-0" />
+      <span className="truncate">
+        {visitor.personToVisit}
+      </span>
     </div>
 
-    <div className="flex items-center gap-1">
-      <ClipboardDocumentListIcon className="w-4 h-4 text-gray-500 shrink-0" />
-      <span className="text-xs text-gray-500">Purpose:</span>
-      <span className="truncate">{visitor.purpose}</span>
+    {/* PURPOSE */}
+    <div className="flex items-center gap-1 min-w-0">
+      <ClipboardDocumentListIcon className="w-4 h-4 text-cyan-500 shrink-0" />
+      <span className="truncate">
+        {visitor.purpose}
+      </span>
     </div>
+
   </div>
 
-          {/* ACTIONS */}
-          <div className="flex gap-1 sm:gap-2 items-center mt-2 sm:mt-0 flex-wrap sm:flex-nowrap">
-            {isActive && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleTimeOut(visitor);
-                }}
-                className="p-2 bg-yellow-400 rounded-full text-white"
-              >
-                <ClockIcon className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEditOpen(visitor);
-              }}
-              className="p-2 bg-blue-500 rounded-full text-white"
-            >
-              <PencilSquareIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteOpen(visitor.id);
-              }}
-              className="p-2 bg-red-500 rounded-full text-white"
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
+  {/* RIGHT SIDE (Buttons) */}
+  <div className="flex items-center gap-2 shrink-0">
 
-            <ChevronDownIcon
-              className={`w-5 h-5 transition-transform ${isOpen ? "rotate-180" : ""}`}
-            />
-          </div>
-        </div>
-      </div>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        if (canModify && isActive) handleTimeOut(visitor);
+      }}
+      disabled={!canModify || !isActive}
+      className={`p-2 rounded-full text-white transition
+        ${
+          !canModify || !isActive
+            ? "bg-gray-400 cursor-not-allowed opacity-60"
+            : "bg-yellow-400 hover:scale-105"
+        }`}
+    >
+      <ClockIcon className="w-4 h-4" />
+    </button>
 
-      {/* DETAILS */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        if (canModify) handleEditOpen(visitor);
+      }}
+      disabled={!canModify}
+      className={`p-2 rounded-full text-white transition
+        ${
+          !canModify
+            ? "bg-gray-400 cursor-not-allowed opacity-60"
+            : "bg-blue-500 hover:scale-105"
+        }`}
+    >
+      <PencilSquareIcon className="w-4 h-4" />
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        if (canModify) handleDeleteOpen(visitor.id);
+      }}
+      disabled={!canModify}
+      className={`p-2 rounded-full text-white transition
+        ${
+          !canModify
+            ? "bg-gray-400 cursor-not-allowed opacity-60"
+            : "bg-red-500 hover:scale-105"
+        }`}
+    >
+      <TrashIcon className="w-4 h-4" />
+    </button>
+
+    <ChevronDownIcon
+      className={`w-5 h-5 transition-transform ${
+        isOpen ? "rotate-180" : ""
+      }`}
+    />
+  </div>
+</div>
+
+      {/* DETAILS SECTION */}
       {isOpen && (
         <div className="px-4 pb-4 pt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 text-sm border-t">
           <p className="flex items-center gap-2">

@@ -6,6 +6,10 @@ import { QRCodeCanvas } from "qrcode.react";
 import html2canvas from "html2canvas";
 
 export default function ViewTruckModal({ open, onClose, truck, darkMode = false }) {
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+const userRole = storedUser?.role || "";
+const canManage = userRole === "Admin" || userRole === "IT";
+
   const [logs, setLogs] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: "date", direction: "asc" });
   const [activeTab, setActiveTab] = useState("info");
@@ -27,7 +31,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
     if (!truck) return;
     const fetchTruckLogs = async () => {
       try {
-        const res = await axios.get("http://192.168.100.206:5000/api/trucks");
+        const res = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/trucks");
         const truckLogs = res.data.filter(t => t.plateNumber === truck.plateNumber);
         setLogs(truckLogs);
       } catch (err) {
@@ -42,7 +46,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
     if (!truck.clientTruckId) {
       const fetchClientId = async () => {
         try {
-          const res = await axios.get("http://192.168.100.206:5000/api/clients");
+          const res = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/clients");
           const client = res.data.find(c => c.plateNumber === truck.plateNumber);
           if (client) truck.clientTruckId = client.id;
         } catch (err) {
@@ -80,7 +84,11 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
   if (!truck) return null;
 
   const truckDetailsURL = `${FRONTEND_URL}/truck-details/${truck.plateNumber}`;
-  const imageSrc = imagePreview || truck.imageUrl || defaultTruckImage;
+const BACKEND_URL = "https://tmvasbackend.arrowgo-logistics.com";
+
+const imageSrc =
+  imagePreview ||
+  (truck.imageUrl ? `${BACKEND_URL}${truck.imageUrl}` : defaultTruckImage);
 
   const handleImageClick = () => fileInputRef.current?.click();
   const handleImageChange = async (e) => {
@@ -94,7 +102,7 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
       const formData = new FormData();
       formData.append("truckImage", file);
       const res = await axios.put(
-        `http://192.168.100.206:5000/api/clients/${truckId}/upload-image`,
+        `https://tmvasbackend.arrowgo-logistics.com/api/clients/${truckId}/upload-image`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -179,11 +187,17 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
                   <h2 className="text-xl sm:text-2xl font-bold">Truck Profile</h2>
                   <div className="flex gap-2 items-center">
                     <button
-                      onClick={handleExportPNG}
-                      className="px-3 py-1 bg-green-500 text-white rounded text-sm"
-                    >
-                      Export PNG
-                    </button>
+  onClick={canManage ? handleExportPNG : undefined}
+  disabled={!canManage}
+  title={!canManage ? "Only Admin or IT can export" : ""}
+  className={`px-3 py-1 rounded text-sm transition ${
+    canManage
+      ? "bg-green-500 hover:bg-green-600 text-white"
+      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+  }`}
+>
+  Export PNG
+</button>
                     <button onClick={onClose} className="text-2xl font-bold">✕</button>
                   </div>
                 </div>
@@ -222,11 +236,21 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
                           `}
                         >
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleImageClick(); }}
-                            className="px-3 py-1 bg-white text-gray-900 rounded text-xs sm:text-sm font-semibold active:scale-95"
-                          >
-                            Upload Photo
-                          </button>
+  onClick={
+    canManage
+      ? (e) => { e.stopPropagation(); handleImageClick(); }
+      : undefined
+  }
+  disabled={!canManage}
+  title={!canManage ? "Only Admin or IT can upload photo" : ""}
+  className={`px-3 py-1 rounded text-xs sm:text-sm font-semibold transition ${
+    canManage
+      ? "bg-white text-gray-900 active:scale-95"
+      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+  }`}
+>
+  Upload Photo
+</button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setShowProfile(true); }}
                             className="px-3 py-1 bg-white text-gray-900 rounded text-xs sm:text-sm font-semibold active:scale-95"
@@ -470,7 +494,12 @@ export default function ViewTruckModal({ open, onClose, truck, darkMode = false 
     }}
   >
     <img
-      src={imagePreview || truck.imageUrl || "/images/truck-placeholder.png"}
+      src={
+  imagePreview ||
+  (truck.imageUrl
+    ? `${BACKEND_URL}${truck.imageUrl}`
+    : "/images/truck-placeholder.png")
+}
       alt="Truck"
       style={{
         width: "200px",

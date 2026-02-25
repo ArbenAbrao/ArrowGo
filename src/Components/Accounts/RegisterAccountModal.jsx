@@ -82,17 +82,17 @@ export default function RegisterAccountModal({
             {/* Role and Branch Dropdowns */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
-              >
-                <option value="User">User</option>
-                <option value="Admin">Admin</option>
-                <option value="Admin">IT</option>
-
-              </select>
+  name="role"
+  value={formData.role}
+  onChange={handleChange}
+  required
+  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+>
+  <option value="User">User</option>
+  <option value="Admin">Admin</option>
+  <option value="IT">IT</option>
+  <option value="Client">Client</option>
+</select>
 
               <select
                 name="branch"

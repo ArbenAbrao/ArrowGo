@@ -42,7 +42,7 @@ const handleSubmit = async (e) => {
     // Combine 12-hour time into string
     const formattedTime = `${form.hour}:${form.minute} ${form.ampm}`;
 
-    const res = await axios.post("http://192.168.100.206:5000/api/appointment-requests", {
+    const res = await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests", {
       visitorName: form.visitorName,
       company: form.company,
       personToVisit: form.personToVisit,
@@ -112,7 +112,7 @@ const handleSubmit = async (e) => {
         >
           {/* Logo */}
           <div className="flex justify-center mb-2">
-            <img src="/logo4.png" alt="Logo" className="h-14 w-14" />
+            <img src="/logo22.png" alt="Logo" className="h-12 sm:h-16 w-auto" />
           </div>
 
           <h2 className="text-center text-green-800 font-bold text-lg mb-3">

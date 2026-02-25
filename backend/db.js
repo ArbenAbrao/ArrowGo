@@ -1,27 +1,19 @@
 const mysql = require("mysql2");
 
-// Create MySQL connection (callback style - for old routes)
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "dbtruck",
+const db = mysql.createPool({
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "dbtruck",
 
-  // ✅ Important settings
-  timezone: "+08:00",   // Philippines timezone
-  dateStrings: true     // Return DATE/DATETIME as plain strings (no auto shift)
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+
+  timezone: "+08:00",
+  dateStrings: true,
 });
 
-// Connect to MySQL
-db.connect((err) => {
-  if (err) {
-    console.error("MySQL Connection Error:", err);
-    return;
-  }
-  console.log("MySQL Connected (callback mode)");
-});
-
-// Promise wrapper (for async/await routes)
 const dbPromise = db.promise();
 
 module.exports = { db, dbPromise };

@@ -41,6 +41,21 @@ app.get("/", (req, res) => {
   res.status(200).send("🚚 Truck Management API is running!");
 });
 
+// ================= ERROR HANDLER =================
+app.use((err, req, res, next) => {
+  console.error("🔥 Server Error:", err.stack);
+  res.status(500).json({ message: "Internal Server Error" });
+});
+
+// Prevent server crash
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled Rejection:", err);
+});
+
 // ================= START SERVER =================
 app.listen(PORT, "0.0.0.0", () => {
   console.log("======================================");

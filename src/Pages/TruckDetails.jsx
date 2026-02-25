@@ -4,6 +4,8 @@ import axios from "axios";
 import { QRCodeCanvas } from "qrcode.react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const BACKEND_URL = "https://tmvasbackend.arrowgo-logistics.com";
+
 export default function TruckDetails() {
   const { plateNumber } = useParams();
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ export default function TruckDetails() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const clientRes = await axios.get(`http://192.168.100.206:5000/api/clients`);
+        const clientRes = await axios.get(`https://tmvasbackend.arrowgo-logistics.com/api/clients`);
         const foundClient = clientRes.data.find((c) => c.plateNumber === plateNumber);
         if (!foundClient) {
           alert("Client not found!");
@@ -30,7 +32,7 @@ export default function TruckDetails() {
         }
         setClient(foundClient);
 
-        const trucksRes = await axios.get(`http://192.168.100.206:5000/api/trucks`);
+        const trucksRes = await axios.get(`https://tmvasbackend.arrowgo-logistics.com/api/trucks`);
         const truckLogs = trucksRes.data.filter((t) => t.plateNumber === plateNumber);
         setLogs(truckLogs || []);
       } catch (err) {
@@ -75,7 +77,9 @@ export default function TruckDetails() {
     );
   if (!client) return null;
 
-  const imageSrc = client.imageUrl || "/images/truck-placeholder.png";
+  const imageSrc = client.imageUrl
+  ? `${BACKEND_URL}${client.imageUrl}`
+  : "/images/truck-placeholder.png";
 
   const clientDetails = [
     ["Client Name", client.clientName],

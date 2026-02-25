@@ -61,11 +61,20 @@ export default function CompleteTrucksListModal({
     }
 
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      data = data.filter((t) =>
-        `${t.clientName || ""} ${t.truckType || ""} ${t.plateNumber || ""} ${t.bay || ""} ${t.driver || ""} ${t.purpose || ""}`.toLowerCase().includes(term)
-      );
-    }
+  const term = searchTerm.toLowerCase();
+  data = data.filter((t) =>
+    `${t.clientName || ""} 
+     ${t.branchRegistered || ""} 
+     ${t.destinationBranch || ""} 
+     ${t.truckType || ""} 
+     ${t.plateNumber || ""} 
+     ${t.bay || ""} 
+     ${t.driver || ""} 
+     ${t.purpose || ""}`
+      .toLowerCase()
+      .includes(term)
+  );
+}
 
     if (sortConfig.key) {
       data.sort((a, b) => {
@@ -112,7 +121,7 @@ export default function CompleteTrucksListModal({
     if (!selectedIds.length) return;
     if (!window.confirm(`Delete ${selectedIds.length} selected trucks?`)) return;
     try {
-      await Promise.all(selectedIds.map((id) => axios.delete(`http://192.168.100.206:5000/api/trucks/${id}`)));
+      await Promise.all(selectedIds.map((id) => axios.delete(`https://tmvasbackend.arrowgo-logistics.com/api/trucks/${id}`)));
       setTrucks((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
       setSelectedIds([]);
       setCurrentPage(1);
@@ -274,10 +283,39 @@ export default function CompleteTrucksListModal({
         checked={selectedIds.length === data.length && data.length > 0}
       />
     </th>
-    {["Client","Type","Plate","Bay","Driver","Purpose","Date","In","Out","Out Date"].map((h) => (
-      <th
+{[
+  "Client",
+  "Origin",
+  "Destination",
+  "Type",
+  "Plate",
+  "Bay",
+  "Driver",
+  "Purpose",
+  "Date",
+  "In",
+  "Out",
+  "Out Date",
+].map((h) => (      <th
         key={h}
-        onClick={() => handleSort(h.toLowerCase().replace(/\s+/g, ""))}
+        onClick={() => {
+  const map = {
+    Origin: "branchRegistered",
+    Destination: "destinationBranch",
+    Client: "clientName",
+    Type: "truckType",
+    Plate: "plateNumber",
+    Bay: "bay",
+    Driver: "driver",
+    Purpose: "purpose",
+    Date: "date",
+    In: "timeIn",
+    Out: "timeOut",
+    "Out Date": "timeOutDate",
+  };
+
+  handleSort(map[h] || "date");
+}}
         className="px-4 py-3 border cursor-pointer whitespace-nowrap
                    transition-colors duration-200 hover:text-cyan-400 hover:shadow-[0_0_8px_cyan]"
       >
@@ -310,7 +348,26 @@ export default function CompleteTrucksListModal({
         />
       </td>
       <td className="p-3 border">{highlight(t.clientName)}</td>
-      <td className="p-3 border">{highlight(t.truckType)}</td>
+
+{/* ORIGIN */}
+<td className="p-3 border">
+  {highlight(t.branchRegistered)}
+</td>
+
+{/* DESTINATION */}
+<td className="p-3 border">
+  <div className="flex items-center gap-2">
+    {highlight(t.destinationBranch)}
+
+    {t.branchRegistered === t.destinationBranch && (
+      <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-600 dark:text-green-400 font-semibold">
+        Internal
+      </span>
+    )}
+  </div>
+</td>
+
+<td className="p-3 border">{highlight(t.truckType)}</td>
       <td className="p-3 border">{highlight(t.plateNumber)}</td>
       <td className="p-3 border">{highlight(t.bay)}</td>
       <td className="p-3 border">{highlight(t.driver)}</td>
