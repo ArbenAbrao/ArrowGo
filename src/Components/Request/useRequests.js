@@ -2,14 +2,19 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+// Single source of truth for the API base URL.
+// Set VITE_API_URL in your .env file (Vite root) so this never
+// needs to be edited again when your WSL2/LAN IP changes.
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function useRequests() {
   const [requests, setRequests] = useState([]);
   const [selectedBulk, setSelectedBulk] = useState([]);
 
   const loadRequests = async () => {
     try {
-      const resTruck = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/truck-requests");
-      const resAppointment = await axios.get("https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests");
+      const resTruck = await axios.get(`${API_URL}/api/truck-requests`);
+      const resAppointment = await axios.get(`${API_URL}/api/appointment-requests`);
 
       const formattedTruck = resTruck.data.map(r => ({
         id: r.id,
@@ -53,13 +58,13 @@ export default function useRequests() {
   const approve = async (req) => {
     try {
       if (req.type === "truck") {
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/truck-requests/${req.id}/approve`);
-        await axios.post("https://tmvasbackend.arrowgo-logistics.com/api/register-truck", req.data);
+        await axios.put(`${API_URL}/api/truck-requests/${req.id}/approve`);
+        await axios.post(`${API_URL}/api/register-truck`, req.data);
       }
 
       if (req.type === "appointment") {
         // ✅ ONLY approve appointment
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests/${req.id}/approve`);
+        await axios.put(`${API_URL}/api/appointment-requests/${req.id}/approve`);
         // ❌ NO visitors insert here anymore
       }
 
@@ -75,9 +80,9 @@ export default function useRequests() {
   const reject = async (id, type) => {
     try {
       if (type === "truck") {
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/truck-requests/${id}/reject`);
+        await axios.put(`${API_URL}/api/truck-requests/${id}/reject`);
       } else {
-        await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests/${id}/reject`);
+        await axios.put(`${API_URL}/api/appointment-requests/${id}/reject`);
       }
       loadRequests();
     } catch (err) {

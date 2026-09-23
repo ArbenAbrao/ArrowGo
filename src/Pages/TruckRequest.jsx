@@ -5,7 +5,12 @@ import { Dialog, Transition } from "@headlessui/react";
 import { FaFacebookF, FaInstagram, FaTwitter } from "react-icons/fa";
 import axios from "axios";
 
-const API = "https://tmvasbackend.arrowgo-logistics.com/api"; // your backend
+// Single source of truth for the API base URL.
+// Set REACT_APP_API_URL in your .env file (frontend root) so this never
+// needs to be edited again when your WSL2/LAN IP changes. CRA only
+// reads REACT_APP_* env vars, and only at build/dev-server start time,
+// so restart 'npm start' after changing .env.
+const API = `${process.env.REACT_APP_API_URL}/api`;
 
 export default function TruckRequest() {
   const [form, setForm] = useState({
@@ -95,7 +100,7 @@ export default function TruckRequest() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://192.168.100.206:5000/api/truck-requests", form);
+      await axios.post(`${API}/truck-requests`, form);
       setIsSubmitted(true);
       setForm({
         plateNumber: "",
@@ -246,7 +251,7 @@ export default function TruckRequest() {
     <div
       className="min-h-screen flex flex-col relative pb-24"
       style={{
-        backgroundImage: "url('/Truck1.jpg')",
+        backgroundImage: "url('/DSC03640.JPG')",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}

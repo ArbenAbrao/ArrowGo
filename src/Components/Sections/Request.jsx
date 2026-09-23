@@ -1,80 +1,156 @@
 // src/Components/Sections/Request.jsx
 import { motion } from "framer-motion";
-import { FaTruck, FaCalendarAlt } from "react-icons/fa";
+import { Truck, CalendarCheck, ArrowUpRight } from "lucide-react";
+
+const cards = [
+  {
+    code: "OP-01",
+    title: "Register Truck",
+    desc: "Register your truck to start scheduling pickups and deliveries.",
+    icon: Truck,
+    btnText: "Register Truck",
+    link: "/register-truck",
+    status: "LOGIN REQUIRED",
+    accent: "#059669",
+    requiresLogin: true,
+  },
+  {
+    code: "OP-02",
+    title: "Set Appointment",
+    desc: "Visit our office to inquire or schedule an appointment conveniently.",
+    icon: CalendarCheck,
+    btnText: "Set Appointment",
+    link: "/appointment",
+    status: "NO LOGIN NEEDED",
+    accent: "#2563EB",
+    requiresLogin: false,
+  },
+];
 
 export default function Request({ onLoginClick }) {
-  const cards = [
-    {
-      title: "Register Truck",
-      desc: "Register your truck easily to start scheduling pickups and deliveries.",
-      icon: FaTruck,
-      btnText: "Register Truck",
-      link: "/register-truck",
-      bgGradient: "bg-gradient-to-br from-green-200 to-green-400",
-      textColor: "text-green-900",
-      btnColor: "bg-green-600 hover:bg-green-500",
-      iconColor: "text-green-900",
-      iconGlow: "shadow-green-400",
-      requiresLogin: true,
-    },
-    {
-      title: "Set Appointment",
-      desc: "Visit our office to inquire or schedule an appointment conveniently.",
-      icon: FaCalendarAlt,
-      btnText: "Set Appointment",
-      link: "/appointment",
-      bgGradient: "bg-gradient-to-br from-blue-200 to-blue-400",
-      textColor: "text-blue-900",
-      btnColor: "bg-blue-600 hover:bg-blue-500",
-      iconColor: "text-blue-900",
-      iconGlow: "shadow-blue-400",
-      requiresLogin: false,
-    },
-  ];
-
   return (
-    <section id="Request" className="bg-white py-20">
-      <div className="max-w-6xl mx-auto px-6 text-center">
-        <h2 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-green-500">
-          Register Truck & Set Appointment
-        </h2>
-        <div className="w-24 h-1 bg-green-500 mx-auto mb-8 rounded"></div>
+    <section id="Request" className="relative bg-white py-24 px-6 overflow-hidden">
+      {/* Same quiet blueprint grid as About — keeps sections feeling like one system */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(#0B1220 1px, transparent 1px), linear-gradient(90deg, #0B1220 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
 
-        <div className="grid md:grid-cols-2 gap-8">
+      <div className="relative max-w-5xl mx-auto text-center">
+        <motion.span
+          initial={{ opacity: 0, y: -10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 mb-6 px-4 py-1.5 text-[11px] tracking-[0.25em] text-[#0B1220]/60 border border-[#0B1220]/10 rounded-full"
+          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+          GET STARTED
+        </motion.span>
+
+        <motion.h2
+          initial={{ opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="font-extrabold uppercase leading-[1.05] text-[#0B1220] text-3xl sm:text-4xl lg:text-5xl mb-16"
+          style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
+        >
+          Register a truck, or set an appointment
+        </motion.h2>
+
+        <div className="grid md:grid-cols-2 gap-6 sm:gap-8 text-left">
           {cards.map((card, i) => {
-            const IconComponent = card.icon;
+            const Icon = card.icon;
             return (
               <motion.div
-                key={i}
-                className={`${card.bgGradient} shadow-inner shadow-lg rounded-2xl p-8 transform transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:scale-105`}
-                initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: i * 0.2, type: "spring", stiffness: 100 }}
+                key={card.code}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: i * 0.15, ease: "easeOut" }}
+                whileHover={{ y: -4 }}
+                className="group relative rounded-xl border border-[#0B1220]/10 bg-white overflow-hidden transition-shadow duration-300 hover:shadow-[0_16px_40px_-16px_rgba(11,18,32,0.25)]"
               >
-                <motion.div
-                  whileHover={{ y: -5, scale: 1.1 }}
-                  className={`mb-4 inline-block transition-shadow duration-300 hover:shadow-[0_0_20px_3px_${card.iconGlow}] rounded-full`}
-                >
-                  <IconComponent className={`text-5xl ${card.iconColor}`} />
-                </motion.div>
+                {/* Ticket header strip */}
+                <div className="flex items-center justify-between px-6 sm:px-7 pt-6">
+                  <span
+                    className="text-xs tracking-[0.2em] text-[#94A3B8]"
+                    style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    {card.code}
+                  </span>
+                  <span
+                    className="text-[10px] tracking-[0.15em] px-2.5 py-1 rounded-full border"
+                    style={{
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      color: card.accent,
+                      borderColor: `${card.accent}33`,
+                      backgroundColor: `${card.accent}0D`,
+                    }}
+                  >
+                    {card.status}
+                  </span>
+                </div>
 
-                <h3 className={`text-2xl font-bold mb-4 ${card.textColor}`}>
-                  {card.title}
-                </h3>
-                <p className={`mb-6 ${card.textColor}`}>{card.desc}</p>
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  className={`${card.btnColor} text-white px-6 py-3 rounded-lg font-medium transition`}
-                  onClick={() => {
-                    if (card.link === "/appointment") {
-                      window.open(card.link, "_blank"); // open in new tab
-                    } else {
-                      onLoginClick("/truck-request"); // pass path to login modal
-                    }
-                  }}
-                >
-                  {card.btnText}
-                </motion.button>
+                <div className="px-6 sm:px-7 pt-5">
+                  <span
+                    className="inline-flex items-center justify-center w-11 h-11 rounded-lg mb-5"
+                    style={{ backgroundColor: `${card.accent}14`, color: card.accent }}
+                  >
+                    <Icon size={20} />
+                  </span>
+
+                  <h3
+                    className="text-xl sm:text-2xl font-bold text-[#0B1220] mb-2"
+                    style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
+                  >
+                    {card.title}
+                  </h3>
+                  <p className="text-[#475569] text-sm sm:text-base leading-relaxed mb-8">
+                    {card.desc}
+                  </p>
+                </div>
+
+                {/* Perforated tear line */}
+                <div className="relative px-0">
+                  <div
+                    className="w-full h-px"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(to right, rgba(11,18,32,0.15) 0 6px, transparent 6px 12px)",
+                    }}
+                  />
+                  <span className="absolute -left-2.5 -top-2.5 w-5 h-5 rounded-full bg-white border border-[#0B1220]/10" />
+                  <span className="absolute -right-2.5 -top-2.5 w-5 h-5 rounded-full bg-white border border-[#0B1220]/10" />
+                </div>
+
+                <div className="px-6 sm:px-7 py-6">
+                  <motion.button
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      if (!card.requiresLogin) {
+                        window.open(card.link, "_blank");
+                      } else {
+                        onLoginClick(card.link);
+                      }
+                    }}
+                    className="group/btn inline-flex items-center gap-1.5 font-semibold text-sm sm:text-base text-white px-5 py-2.5 rounded-md transition-colors"
+                    style={{ backgroundColor: card.accent }}
+                  >
+                    {card.btnText}
+                    <ArrowUpRight
+                      size={16}
+                      className="transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5"
+                    />
+                  </motion.button>
+                </div>
               </motion.div>
             );
           })}

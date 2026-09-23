@@ -1,195 +1,53 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { motion } from "framer-motion";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import {
+  MagnifyingGlassIcon,
+  MapPinIcon,
+  CalendarDaysIcon,
+  TruckIcon,
+  ClipboardDocumentListIcon,
+  PlusIcon,
+  ArchiveBoxIcon,
+} from "@heroicons/react/24/outline";
 
-/* ================= SEARCH BAR ================= */
+// Single source of truth for the API base URL.
+// Set REACT_APP_API_URL in your .env file (frontend root) so this never
+// needs to be edited again when your WSL2/LAN IP changes. CRA only
+// reads REACT_APP_* env vars, and only at build/dev-server start time,
+// so restart 'npm start' after changing .env.
+const API_URL = process.env.REACT_APP_API_URL;
 
-function SearchBar({ searchTerm, setSearchTerm, darkMode }) {
-  return (
-    <div className="w-full">
-      <input
-        type="text"
-        placeholder="Search by client, plate, truck type, or driver..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className={`
-          w-full md:w-1/2 px-4 py-2.5 rounded-lg text-sm transition
-          focus:outline-none focus:ring-2
-          ${
-            darkMode
-              ? "bg-gray-800 text-gray-300 border border-gray-700 focus:ring-green-500 placeholder-gray-400"
-              : "bg-gray-50 text-gray-900 border border-gray-300 focus:ring-green-400 placeholder-gray-500"
-          }
-        `}
-      />
-    </div>
-  );
-}
-
-/* ================= HEADER ================= */
-function HeaderSection({ darkMode }) {
-  return (
-    <div className="flex items-center gap-3">
-      <img
-        src="/logo4.png"
-        alt="Logo"
-        className="h-10 w-10 sm:h-12 sm:w-12 object-contain"
-      />
-      <h1
-        className={`text-2xl font-bold ${
-          darkMode
-            ? "text-cyan-400 drop-shadow-lg"
-            : "text-green-500 drop-shadow-lg"
-        }`}
-      >
-        Vehicle Management
-      </h1>
-    </div>
-  );
-}
-
-/* ================= ACTIONS + FILTERS ================= */
-function ActionSection({
-  filterDate,
-  setFilterDate,
-  setIsRegisterModalOpen,
-  setIsRegisteredModalOpen,
-  setIsAddModalOpen,
-  setIsCompleteListModalOpen,
-  selectedBranch,
-  setSelectedBranch,
-  selectedClient,
-  setSelectedClient,
-  clients,
-  darkMode,
-}) {
-  const [branches, setBranches] = useState([]);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const contentRef = useRef(null);
-
-  useEffect(() => {
-    axios.get("https://tmvasbackend.arrowgo-logistics.com/api/branches").then((res) => setBranches(res.data));
-  }, []);
-
-  return (
-    <div className="w-full">
-      {/* MOBILE TOGGLE */}
-      <button
-        className={`sm:hidden w-full flex justify-between items-center px-4 py-2 rounded-lg mb-2 transition
-          ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-900"}`}
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-      >
-        <span>Actions</span>
-        <span className={`transition-transform ${isMobileOpen ? "rotate-180" : ""}`}>
-          ▼
-        </span>
-      </button>
-
-      {/* CONTENT */}
-      <div
-        ref={contentRef}
-        className="flex flex-col md:flex-row gap-3 items-start md:items-center overflow-hidden transition-[max-height] duration-500"
-        style={{
-          maxHeight:
-            isMobileOpen || window.innerWidth >= 640
-              ? contentRef.current?.scrollHeight + "px"
-              : "0px",
-        }}
-      >
-        {/* ACTION BUTTONS */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setIsRegisterModalOpen(true)}
-            className={`px-4 py-2 rounded-md text-sm ${
-              darkMode
-                ? "bg-green-600 hover:bg-green-700 text-white"
-                : "bg-green-500 hover:bg-green-600 text-white"
-            }`}
-          >
-            Register Vehicle
-          </button>
-
-          
-
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className={`px-4 py-2 rounded-md text-sm ${
-              darkMode
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
-          >
-            Create Time in
-          </button>
-
-        
-        </div>
-
-        {/* FILTERS */}
-        <div className="md:ml-auto flex flex-wrap gap-2 w-full md:w-auto mt-2 md:mt-0">
-          {/* BRANCH */}
-          <select
-            value={selectedBranch}
-            onChange={(e) => {
-              setSelectedBranch(e.target.value);
-              setSelectedClient("");
-            }}
-            className={`px-3 py-2 rounded-md text-sm ${
-              darkMode
-                ? "bg-gray-800 text-gray-300 border border-gray-700"
-                : "bg-gray-50 text-gray-900 border border-gray-300"
-            }`}
-          >
-            <option value="">All Branches</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.name}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-
-          {/* CLIENT */}
-          <select
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-            disabled={!selectedBranch}
-            className={`px-3 py-2 rounded-md text-sm ${
-              darkMode
-                ? "bg-gray-800 text-gray-300 border border-gray-700"
-                : "bg-gray-50 text-gray-900 border border-gray-300"
-            }`}
-          >
-            <option value="">All Clients</option>
-           {selectedBranch &&
-  [...new Set(
-    clients
-      .filter((c) => c.branchRegistered === selectedBranch)
-      .map((c) => c.clientName)
-  )].map((clientName) => (
-    <option key={clientName} value={clientName}>
-      {clientName}
-    </option>
-  ))}
-
-          </select>
-
-          {/* DATE */}
-          <DatePicker
-            selected={filterDate}
-            onChange={setFilterDate}
-            dateFormat="MMM d, yyyy"
-            placeholderText="Filter by date"
-            className={`px-3 py-2 rounded-md text-sm ${
-              darkMode
-                ? "bg-gray-800 text-gray-300 border border-gray-700"
-                : "bg-gray-50 text-gray-900 border border-gray-300"
-            }`}
-          />
-        </div>
-      </div>
-    </div>
-  );
+// Same tokens as visitors.jsx: slate-950/900 surfaces, emerald as the
+// primary accent. Kept local so this file matches its sibling exactly.
+function getTheme(darkMode) {
+  return darkMode
+    ? {
+        titleText: "text-slate-100",
+        iconBadge: "bg-emerald-500/10 border-emerald-500/25 text-emerald-400",
+        subtleText: "text-slate-500",
+        toolbarBg: "bg-slate-900/60 border-slate-800",
+        inputBg:
+          "bg-slate-800/70 text-slate-100 border-slate-700 placeholder-slate-500 focus:ring-emerald-500/40 focus:border-emerald-500/60",
+        selectBg:
+          "bg-slate-800/70 text-slate-100 border-slate-700 focus:ring-emerald-500/40 focus:border-emerald-500/60",
+        btnPrimary:
+          "bg-gradient-to-br from-emerald-400 to-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/20 hover:brightness-110",
+        btnSecondary: "border border-slate-700 text-slate-200 hover:bg-slate-800",
+      }
+    : {
+        titleText: "text-slate-900",
+        iconBadge: "bg-emerald-50 border-emerald-200 text-emerald-600",
+        subtleText: "text-slate-500",
+        toolbarBg: "bg-white border-slate-200",
+        inputBg:
+          "bg-white text-slate-900 border-slate-300 placeholder-slate-400 focus:ring-emerald-400 focus:border-emerald-400",
+        selectBg: "bg-white text-slate-900 border-slate-300 focus:ring-emerald-400 focus:border-emerald-400",
+        btnPrimary: "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20",
+        btnSecondary: "border border-slate-300 text-slate-700 hover:bg-slate-100",
+      };
 }
 
 /* ================= MAIN LAYOUT ================= */
@@ -209,34 +67,161 @@ export default function TruckManagementLayout({
   searchTerm,
   setSearchTerm,
 }) {
+  const theme = getTheme(darkMode);
+  const [branches, setBranches] = useState([]);
+  const datePickerRef = useRef(null);
+
+  useEffect(() => {
+    axios.get(`${API_URL}/api/branches`).then((res) => setBranches(res.data));
+  }, []);
+
+  const clientOptions = selectedBranch
+    ? [
+        ...new Set(
+          clients
+            .filter((c) => c.branchRegistered === selectedBranch)
+            .map((c) => c.clientName)
+        ),
+      ]
+    : [];
+
   return (
-    <div
-      className={`flex flex-col gap-4 w-full p-4 rounded-lg ${
-        darkMode ? "bg-gray-800 text-gray-300" : "bg-gray-50 text-gray-900"
-      }`}
-    >
-      <HeaderSection darkMode={darkMode} />
+    <div className="mb-6">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap');
+        .page-title { font-family: 'Space Grotesk', sans-serif; }
+      `}</style>
 
-      <SearchBar
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        darkMode={darkMode}
-      />
+      {/* HEADER */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex items-center gap-3 mb-6"
+      >
+      </motion.div>
 
-      <ActionSection
-        filterDate={filterDate}
-        setFilterDate={setFilterDate}
-        setIsRegisterModalOpen={setIsRegisterModalOpen}
-        setIsRegisteredModalOpen={setIsRegisteredModalOpen}
-        setIsAddModalOpen={setIsAddModalOpen}
-        setIsCompleteListModalOpen={setIsCompleteListModalOpen}
-        selectedBranch={selectedBranch}
-        setSelectedBranch={setSelectedBranch}
-        selectedClient={selectedClient}
-        setSelectedClient={setSelectedClient}
-        clients={clients}
-        darkMode={darkMode}
-      />
+      {/* TOOLBAR */}
+      <motion.div
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.05 }}
+        className={`flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center rounded-2xl border p-3 ${theme.toolbarBg}`}
+      >
+        {/* Search */}
+        <div className="relative w-full sm:w-64">
+          <MagnifyingGlassIcon className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${theme.subtleText}`} />
+          <input
+            type="text"
+            placeholder="Search by client, plate, truck type, or driver..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`w-full pl-9 pr-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition ${theme.inputBg}`}
+          />
+        </div>
+
+        {/* Branch Filter */}
+        <div className="relative w-full sm:w-auto">
+          <MapPinIcon className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${theme.subtleText}`} />
+          <select
+            value={selectedBranch}
+            onChange={(e) => {
+              setSelectedBranch(e.target.value);
+              setSelectedClient("");
+            }}
+            className={`w-full sm:w-auto pl-9 pr-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 transition appearance-none ${theme.selectBg}`}
+          >
+            <option value="">All Branches</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.name}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Client Filter */}
+        <div className="relative w-full sm:w-auto">
+          <select
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+            disabled={!selectedBranch}
+            className={`w-full sm:w-auto px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 transition appearance-none disabled:opacity-50 ${theme.selectBg}`}
+          >
+            <option value="">All Clients</option>
+            {clientOptions.map((clientName) => (
+              <option key={clientName} value={clientName}>
+                {clientName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date Filter */}
+        <div className="relative w-full sm:w-auto">
+          <CalendarDaysIcon className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 ${theme.subtleText}`} />
+          <DatePicker
+            ref={datePickerRef}
+            selected={filterDate}
+            onChange={setFilterDate}
+            dateFormat="MMM d, yyyy"
+            placeholderText="Filter by date"
+            className={`w-full sm:w-auto pl-9 pr-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 transition ${theme.inputBg}`}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          {/* Register Vehicle */}
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setIsRegisterModalOpen(true)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${theme.btnPrimary}`}
+          >
+            <TruckIcon className="w-4 h-4" />
+            Register Vehicle
+          </motion.button>
+
+          {/* Registered Vehicles */}
+          {setIsRegisteredModalOpen && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setIsRegisteredModalOpen(true)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${theme.btnSecondary}`}
+            >
+              <ClipboardDocumentListIcon className="w-4 h-4" />
+              Registered
+            </motion.button>
+          )}
+
+          {/* Add Truck */}
+          {setIsAddModalOpen && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setIsAddModalOpen(true)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${theme.btnSecondary}`}
+            >
+              <PlusIcon className="w-4 h-4" />
+              Add Truck
+            </motion.button>
+          )}
+
+          {/* Completed */}
+          {setIsCompleteListModalOpen && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setIsCompleteListModalOpen(true)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${theme.btnSecondary}`}
+            >
+              <ArchiveBoxIcon className="w-4 h-4" />
+              Completed
+            </motion.button>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }

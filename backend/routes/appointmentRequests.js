@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { dbPromise } = require("../db"); // ✅ use promise-style
+const { sendAppointmentStatusEmail } = require("../utils/mailer");
 
 /* ===============================
    GET ONLY PENDING REQUESTS
@@ -29,6 +30,7 @@ router.post("/", async (req, res) => {
   const {
     visitorName,
     company,
+    email,
     personToVisit,
     purpose,
     date,
@@ -40,10 +42,10 @@ router.post("/", async (req, res) => {
     const [result] = await dbPromise.query(
       `
       INSERT INTO appointment_requests
-      (visitor_name, company, person_to_visit, purpose, date, schedule_time, branch, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+      (visitor_name, company, email, person_to_visit, purpose, date, schedule_time, branch, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
       `,
-      [visitorName, company, personToVisit, purpose, date, scheduleTime, branch]
+      [visitorName, company, email || null, personToVisit, purpose, date, scheduleTime, branch]
     );
 
     res.status(201).json({ id: result.insertId, ...req.body, status: "pending" });
@@ -57,11 +59,30 @@ router.post("/", async (req, res) => {
    APPROVE APPOINTMENT
    =============================== */
 router.put("/:id/approve", async (req, res) => {
+  const { id } = req.params;
+
   try {
+    const [[appointment]] = await dbPromise.query(
+      "SELECT * FROM appointment_requests WHERE id = ?",
+      [id]
+    );
+
     await dbPromise.query(
       "UPDATE appointment_requests SET status='approved' WHERE id=?",
-      [req.params.id]
+      [id]
     );
+
+    if (appointment) {
+      // fire-and-forget — a failed email should not fail the approval
+      sendAppointmentStatusEmail(appointment.email, {
+        visitorName: appointment.visitor_name,
+        status: "approved",
+        branch: appointment.branch,
+        date: appointment.date,
+        scheduleTime: appointment.schedule_time,
+      });
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -76,10 +97,25 @@ router.put("/:id/reject", async (req, res) => {
   const { id } = req.params;
 
   try {
+    const [[appointment]] = await dbPromise.query(
+      "SELECT * FROM appointment_requests WHERE id = ?",
+      [id]
+    );
+
     await dbPromise.query(
       "UPDATE appointment_requests SET status = 'rejected' WHERE id = ?",
       [id]
     );
+
+    if (appointment) {
+      sendAppointmentStatusEmail(appointment.email, {
+        visitorName: appointment.visitor_name,
+        status: "rejected",
+        branch: appointment.branch,
+        date: appointment.date,
+        scheduleTime: appointment.schedule_time,
+      });
+    }
 
     res.json({ message: "Appointment rejected" });
   } catch (err) {

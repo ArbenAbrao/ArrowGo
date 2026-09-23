@@ -56,6 +56,7 @@ export default function VisitorsPagination({
     `}
   >
     Next
-  </button>    </div>
+  </button>    
+  </div>
   );
 }

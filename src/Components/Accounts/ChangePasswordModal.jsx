@@ -1,23 +1,32 @@
 import { useState } from "react";
 import axios from "axios";
-import { HiEye, HiEyeOff } from "react-icons/hi";
-import { motion } from "framer-motion";
+import toast from "react-hot-toast";
+import { ArrowPathIcon, CheckIcon, LockClosedIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ModalFrame, PasswordField } from "./accountsUi";
 
-export default function ChangePasswordModal({ account, onClose, onSuccess }) {
+// Single source of truth for the API base URL.
+// Set REACT_APP_API_URL in your .env file (frontend root) so this never
+// needs to be edited again when your WSL2/LAN IP changes. CRA only
+// reads REACT_APP_* env vars, and only at build/dev-server start time,
+// so restart 'npm start' after changing .env.
+const API_URL = process.env.REACT_APP_API_URL;
+
+const requirements = [
+  { label: "Minimum 8 characters", test: (pw) => pw.length >= 8 },
+  { label: "At least 1 uppercase letter", test: (pw) => /[A-Z]/.test(pw) },
+  { label: "At least 1 lowercase letter", test: (pw) => /[a-z]/.test(pw) },
+  { label: "At least 1 number", test: (pw) => /[0-9]/.test(pw) },
+  { label: "At least 1 special character", test: (pw) => /[^A-Za-z0-9]/.test(pw) },
+];
+
+const isValidPassword = (pw) => requirements.every((r) => r.test(pw));
+
+export default function ChangePasswordModal({ open, account, darkMode = true, onClose, onSuccess }) {
+  const acc = account || {};
   const [passwords, setPasswords] = useState({ next: "", confirm: "" });
   const [showPasswords, setShowPasswords] = useState({ next: false, confirm: false });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ next: false, confirm: false });
-
-  const isValidPassword = (pw) => {
-    return (
-      pw.length >= 8 &&
-      /[A-Z]/.test(pw) &&
-      /[a-z]/.test(pw) &&
-      /[0-9]/.test(pw) &&
-      /[^A-Za-z0-9]/.test(pw)
-    );
-  };
 
   const handleValidation = () => {
     const newErrors = {
@@ -28,18 +37,25 @@ export default function ChangePasswordModal({ account, onClose, onSuccess }) {
     return !newErrors.next && !newErrors.confirm;
   };
 
-  const submit = async () => {
-    if (!handleValidation()) return;
+  const resetAndClose = () => {
+    setPasswords({ next: "", confirm: "" });
+    setErrors({ next: false, confirm: false });
+    onClose();
+  };
 
+  const submit = async (e) => {
+    e?.preventDefault();
+    if (!handleValidation() || !acc.id) return;
     try {
       setLoading(true);
-      await axios.put(`https://tmvasbackend.arrowgo-logistics.com/api/admin/accounts/${account.id}/reset-password`, {
+      await axios.put(`${API_URL}/api/admin/accounts/${acc.id}/reset-password`, {
         newPassword: passwords.next,
       });
+      toast.success("Password updated");
       onSuccess();
-      onClose();
+      resetAndClose();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to reset password");
+      toast.error(err.response?.data?.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }
@@ -48,136 +64,94 @@ export default function ChangePasswordModal({ account, onClose, onSuccess }) {
   const generatePassword = () => {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+{}[]<>?";
     let pw = "";
-    for (let i = 0; i < 12; i++) {
-      pw += chars[Math.floor(Math.random() * chars.length)];
-    }
-    setPasswords({ ...passwords, next: pw, confirm: pw });
+    for (let i = 0; i < 12; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+    setPasswords({ next: pw, confirm: pw });
     setErrors({ next: false, confirm: false });
   };
 
-  return (
-    <motion.div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative">
-        <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-gray-100 text-center">
-          Change Password
-        </h3>
+  const strength = requirements.filter((r) => r.test(passwords.next)).length;
+  const strengthTone = strength <= 2 ? "on-rose" : strength <= 4 ? "on-amber" : "on-em";
 
-        {/* New Password */}
-        <div className="relative mb-2">
-          <input
-            type={showPasswords.next ? "text" : "password"}
-            placeholder=" "
-            className={`peer w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-gray-100 ${
-              errors.next
-                ? "border-red-500 focus:ring-red-500"
-                : "border-gray-300 dark:border-gray-700 focus:ring-green-500"
-            }`}
+  return (
+    <ModalFrame
+      open={open}
+      onClose={resetAndClose}
+      darkMode={darkMode}
+      size="md"
+      icon={LockClosedIcon}
+      tone="t-sky"
+      title="Change Password"
+      subtitle={`For ${acc.first_name || ""} ${acc.last_name || ""}`.trim()}
+      footer={
+        <>
+          <button type="button" onClick={resetAndClose} className="ac-btn ac-btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" form="change-password-form" disabled={loading} className="ac-btn ac-btn-primary">
+            {loading ? "Saving..." : "Save"}
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={submit} id="change-password-form" className="space-y-5">
+        <div>
+          <PasswordField
+            id="cp-new"
+            label="New Password"
             value={passwords.next}
             onChange={(e) => setPasswords({ ...passwords, next: e.target.value })}
             onBlur={handleValidation}
+            show={showPasswords.next}
+            onToggle={() => setShowPasswords({ ...showPasswords, next: !showPasswords.next })}
+            invalid={errors.next}
           />
-          <label
-            className={`absolute left-4 text-gray-400 text-sm transition-all
-            ${passwords.next ? "top-1 text-xs text-green-500" : "top-3 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-sm"}`}
-          >
-            New Password
-          </label>
-          <span
-            className="absolute right-4 top-3 cursor-pointer text-gray-500 hover:text-green-500"
-            onClick={() => setShowPasswords({ ...showPasswords, next: !showPasswords.next })}
-          >
-            {showPasswords.next ? <HiEyeOff /> : <HiEye />}
-          </span>
+
+          {/* Strength meter */}
+          <div className="ac-meter mt-3" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <i key={i} className={passwords.next && i < strength ? strengthTone : ""} />
+            ))}
+          </div>
+
+          {/* Requirements */}
+          <ul className="ac-reqs mt-3">
+            {requirements.map((req) => {
+              const met = req.test(passwords.next);
+              return (
+                <li key={req.label} className={met ? "is-met" : ""}>
+                  {met ? <CheckIcon /> : <XMarkIcon style={{ opacity: 0.4 }} />}
+                  <span>{req.label}</span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
-        {/* Password Strength Meter */}
-        <div className="h-2 rounded-full w-full bg-gray-200 dark:bg-gray-700 mb-2 overflow-hidden">
-          <div
-            className={`h-2 transition-all duration-300 ${
-              passwords.next.length === 0
-                ? "w-0 bg-transparent"
-                : passwords.next.length < 8
-                ? "w-1/4 bg-red-500"
-                : /[A-Z]/.test(passwords.next) &&
-                  /[a-z]/.test(passwords.next) &&
-                  /[0-9]/.test(passwords.next) &&
-                  /[^A-Za-z0-9]/.test(passwords.next)
-                ? "w-full bg-green-600"
-                : "w-3/4 bg-yellow-400"
-            }`}
-          ></div>
-        </div>
-
-        {/* Password Requirements */}
-        <ul className="text-xs text-gray-500 dark:text-gray-400 mb-4 pl-4 list-disc">
-          <li className={passwords.next.length >= 8 ? "text-green-600" : ""}>Minimum 8 characters</li>
-          <li className={/[A-Z]/.test(passwords.next) ? "text-green-600" : ""}>At least 1 uppercase letter</li>
-          <li className={/[a-z]/.test(passwords.next) ? "text-green-600" : ""}>At least 1 lowercase letter</li>
-          <li className={/[0-9]/.test(passwords.next) ? "text-green-600" : ""}>At least 1 number</li>
-          <li className={/[^A-Za-z0-9]/.test(passwords.next) ? "text-green-600" : ""}>At least 1 special character</li>
-        </ul>
-
-        {/* Confirm Password */}
-        <div className="relative mb-4">
-          <input
-            type={showPasswords.confirm ? "text" : "password"}
-            placeholder=" "
-            className={`peer w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-gray-100 ${
-              errors.confirm
-                ? "border-red-500 focus:ring-red-500"
-                : "border-gray-300 dark:border-gray-700 focus:ring-green-500"
-            }`}
+        <div>
+          <PasswordField
+            id="cp-confirm"
+            label="Confirm Password"
             value={passwords.confirm}
             onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
             onBlur={handleValidation}
+            show={showPasswords.confirm}
+            onToggle={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+            invalid={errors.confirm}
           />
-          <label
-            className={`absolute left-4 text-gray-400 text-sm transition-all
-            ${passwords.confirm ? "top-1 text-xs text-green-500" : "top-3 peer-placeholder-shown:text-gray-400 peer-placeholder-shown:text-sm"}`}
-          >
-            Confirm Password
-          </label>
-          <span
-            className="absolute right-4 top-3 cursor-pointer text-gray-500 hover:text-green-500"
-            onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-          >
-            {showPasswords.confirm ? <HiEyeOff /> : <HiEye />}
-          </span>
+          {errors.confirm && (
+            <p className="ac-msg is-error" role="alert">
+              Passwords do not match
+            </p>
+          )}
         </div>
 
-        {/* Generate Password Button */}
-        <div className="flex justify-end mb-4">
-          <button
-            type="button"
-            onClick={generatePassword}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
+        <div className="flex justify-end">
+          <button type="button" onClick={generatePassword} className="ac-chip-btn">
+            <ArrowPathIcon className="h-3.5 w-3.5" />
             Generate Password
           </button>
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded border border-gray-300 dark:border-gray-700"
-          >
-            Cancel
-          </button>
-          <button
-            disabled={loading}
-            onClick={submit}
-            className="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </motion.div>
+      </form>
+    </ModalFrame>
   );
 }

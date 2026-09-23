@@ -2,42 +2,54 @@
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { motion } from "framer-motion";
+import { FaSignOutAlt } from "react-icons/fa";
 
-// Sparkle component
-const Sparkle = ({ x, y, delay }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0 }}
-    animate={{ opacity: [0, 1, 0], scale: [0, 1, 0] }}
-    transition={{ duration: 1, repeat: Infinity, repeatDelay: delay }}
-    className="absolute w-1 h-1 bg-white rounded-full"
-    style={{ top: y + "%", left: x + "%" }}
-  />
-);
-
-export default function LogoutModal({ isOpen, onClose, onConfirm }) {
+export default function LogoutModal({ isOpen, onClose, onConfirm, darkMode = true }) {
   const containerVariants = {
-    hidden: { opacity: 0, scale: 0.9 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: { type: "spring", stiffness: 120, damping: 15 },
-    },
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.07 } },
   };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  // Same token family as Welcome.jsx / LoginModal.jsx
+  const theme = darkMode
+    ? {
+        panel: "bg-slate-950/95 border-white/10",
+        titleText: "text-slate-100",
+        bodyText: "text-slate-400",
+        cancelBtn: "border-slate-700 text-slate-200 hover:bg-slate-800 hover:border-slate-600",
+        warnBadge: "bg-amber-500/10 border-amber-500/25 text-amber-400",
+        blobEmerald: "bg-emerald-500/20",
+        blobBlue: "bg-blue-500/20",
+      }
+    : {
+        panel: "bg-white/95 border-slate-200",
+        titleText: "text-slate-900",
+        bodyText: "text-slate-600",
+        cancelBtn: "border-slate-300 text-slate-700 hover:bg-slate-100 hover:border-slate-400",
+        warnBadge: "bg-amber-50 border-amber-200 text-amber-600",
+        blobEmerald: "bg-emerald-400/15",
+        blobBlue: "bg-blue-400/15",
+      };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
-        {/* Magical blurred overlay */}
+        {/* Overlay */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-500"
-          enterFrom="opacity-0 backdrop-blur-none"
-          enterTo="opacity-100 backdrop-blur-md"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
           leave="ease-in duration-300"
-          leaveFrom="opacity-100 backdrop-blur-md"
-          leaveTo="opacity-0 backdrop-blur-none"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-md" />
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -45,48 +57,70 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }) {
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-400"
-              enterFrom="opacity-0 scale-90"
+              enterFrom="opacity-0 scale-95"
               enterTo="opacity-100 scale-100"
               leave="ease-in duration-300"
               leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-90"
+              leaveTo="opacity-0 scale-95"
             >
               <motion.div
-                className="relative w-full max-w-sm p-6 bg-white rounded-3xl shadow-2xl border border-green-100 overflow-hidden"
-                variants={containerVariants}
+                className="relative w-full max-w-sm"
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
+                variants={containerVariants}
               >
-                {/* Magical gradient glow */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-green-300 via-blue-200 to-purple-300 rounded-3xl opacity-20 blur-3xl -z-10"></div>
+                {/* Ambient glow — same emerald/blue pairing as the rest of the app */}
+                <motion.div
+                  animate={{ x: [0, 12, 0], y: [0, -8, 0] }}
+                  transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
+                  className={`absolute -top-14 -left-14 w-48 h-48 rounded-full blur-[70px] -z-10 ${theme.blobBlue}`}
+                />
+                <motion.div
+                  animate={{ x: [0, -12, 0], y: [0, 10, 0] }}
+                  transition={{ repeat: Infinity, duration: 9, ease: "easeInOut" }}
+                  className={`absolute -bottom-14 -right-10 w-52 h-52 rounded-full blur-[80px] -z-10 ${theme.blobEmerald}`}
+                />
 
-                {/* Sparkles */}
-                {Array.from({ length: 15 }).map((_, i) => (
-                  <Sparkle key={i} x={Math.random() * 100} y={Math.random() * 100} delay={Math.random() * 2} />
-                ))}
+                <div
+                  className={`relative rounded-[28px] border backdrop-blur-2xl shadow-2xl px-7 py-9 overflow-hidden transition-colors duration-300 ${theme.panel}`}
+                >
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
 
-                <Dialog.Title className="text-2xl font-bold mb-4 text-gray-900 text-center">
-                  Confirm Logout
-                </Dialog.Title>
-                <p className="mb-6 text-gray-700 text-center font-medium">
-                  Are you sure you want to log out?
-                </p>
-                <div className="flex justify-center gap-4">
-                  <motion.button
-                    whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(239,68,68,0.6)" }}
-                    onClick={onClose}
-                    className="px-6 py-2 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all"
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(34,197,94,0.7)" }}
-                    onClick={onConfirm}
-                    className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold transition-all"
-                  >
-                    Log Out
-                  </motion.button>
+                  <motion.div className="relative flex flex-col items-center gap-4" variants={itemVariants}>
+                    <span className={`flex h-14 w-14 items-center justify-center rounded-2xl border ${theme.warnBadge}`}>
+                      <FaSignOutAlt size={20} />
+                    </span>
+
+                    <Dialog.Title className={`page-title text-xl font-bold ${theme.titleText}`}>
+                      Confirm Logout
+                    </Dialog.Title>
+
+                    <p className={`text-sm leading-6 ${theme.bodyText}`}>
+                      You'll be signed out of the gate control dashboard.
+                      <br />
+                      Are you sure you want to continue?
+                    </p>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants} className="relative flex gap-3 mt-8">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={onClose}
+                      className={`flex-1 px-5 py-3 rounded-xl border font-semibold text-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ${theme.cancelBtn}`}
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={onConfirm}
+                      className="btn-shine flex-1 px-5 py-3 rounded-xl font-semibold text-sm bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/25 hover:brightness-110 transition focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                    >
+                      <span>Log Out</span>
+                    </motion.button>
+                  </motion.div>
                 </div>
               </motion.div>
             </Transition.Child>

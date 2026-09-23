@@ -4,6 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { UserIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
 
+// Single source of truth for the API base URL.
+// Set VITE_API_URL in your .env file (Vite root) so this never
+// needs to be edited again when your WSL2/LAN IP changes.
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function Walkins({ onAddVisitor }) {
   const [form, setForm] = useState({
     visitorName: "",
@@ -51,7 +56,7 @@ export default function Walkins({ onAddVisitor }) {
       };
 
       const res = await axios.post(
-        "https://tmvasbackend.arrowgo-logistics.com/api/visitors/add",
+        `${API_URL}/api/visitors/add`,
         payload
       );
 
@@ -81,7 +86,7 @@ export default function Walkins({ onAddVisitor }) {
   return (
     <div
       className={theme.containerBg}
-      style={{ backgroundImage: "url(/truck1.jpg)" }}
+      style={{ backgroundImage: "url(/DSC03640.JPG)" }}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}

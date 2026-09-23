@@ -1,133 +1,258 @@
-import React, { useEffect, useState, forwardRef, useImperativeHandle } from "react";
-import { UserIcon, CalendarIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+// src/Components/Dashboard/BranchesChart.jsx
+import React, { useEffect, useState, useMemo } from "react";
+import { Doughnut, Pie } from "react-chartjs-2";
 import axios from "axios";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title
+} from "chart.js";
+import ChartDataLabels from "chartjs-plugin-datalabels";
 
-const VisitorStats = forwardRef(({ darkMode }, ref) => {
-  const [visitors, setVisitors] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [openIndex, setOpenIndex] = useState(null); // for mobile accordion
+ChartJS.register(ArcElement, Tooltip, Legend, Title, ChartDataLabels);
 
-  const fetchStats = async () => {
-    try {
-      const [visitorRes, appointmentRes] = await Promise.all([
-        axios.get("https://tmvasbackend.arrowgo-logistics.com/api/visitors"),
-        axios.get("https://tmvasbackend.arrowgo-logistics.com/api/appointment-requests/approved"),
-      ]);
+// Single source of truth for the API base URL.
+// Set VITE_API_URL in your .env file (Vite root) so this never
+// needs to be edited again when your WSL2/LAN IP changes.
+const API_URL = process.env.REACT_APP_API_URL;
 
-      setVisitors(visitorRes.data || []);
-      setAppointments(appointmentRes.data || []);
-    } catch (err) {
-      console.error("Failed to fetch stats:", err);
+export default function BranchesChart({ darkMode, trucks = [] }) {
+  const [branches, setBranches] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("all");
+  const [modalData, setModalData] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [branchesRes, clientsRes] = await Promise.all([
+          axios.get(`${API_URL}/api/branches`),
+          axios.get(`${API_URL}/api/branch-clients`)
+        ]);
+        setBranches(branchesRes.data);
+        setClients(clientsRes.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const selectedBranchId = parseInt(selectedBranch);
+
+  const branchClients = clients.filter(
+    c => c.branch_id === selectedBranchId
+  );
+
+
+  const isSingleBranch = selectedBranch !== "all";
+
+  const chartData = useMemo(() => {
+    if (!branches.length) return { labels: [], datasets: [] };
+
+    if (!isSingleBranch) {
+      // All branches → clients per branch
+      return {
+        labels: branches.map(b => b.name),
+        datasets: [
+          {
+            data: branches.map(b => b.clientCount),
+            backgroundColor: branches.map(
+              (_, i) =>
+                `hsl(${(i * 360) / branches.length}, 70%, ${
+                  darkMode ? "50%" : "65%"
+                })`
+            )
+          }
+        ]
+      };
+    } else {
+      // Single branch → show only clients
+      return {
+        labels: branchClients.map(c => c.name),
+        datasets: [
+          {
+            data: Array(branchClients.length).fill(1),
+            backgroundColor: branchClients.map(
+              (_, i) =>
+                `hsl(${(i * 360) / branchClients.length}, 65%, ${
+                  darkMode ? "50%" : "65%"
+                })`
+            )
+          }
+        ]
+      };
+    }
+  }, [branches, isSingleBranch, branchClients, darkMode]);
+
+  const total =
+    chartData.datasets[0]?.data.reduce((a, b) => a + b, 0) || 0;
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: isSingleBranch ? "75%" : "60%",
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: { color: darkMode ? "#fff" : "#000" }
+      },
+      title: {
+        display: true,
+        text:
+          selectedBranch === "all"
+            ? "Clients per Branch"
+            : "Clients Distribution",
+        color: darkMode ? "#fff" : "#000"
+      },
+      datalabels: {
+        color: "#fff",
+        font: { weight: "bold", size: 12 },
+        formatter: value => {
+          if (!total) return "";
+          return ((value / total) * 100).toFixed(1) + "%";
+        }
+      }
+    },
+    onClick: (_, elements) => {
+      if (!elements.length) return;
+      const index = elements[0].index;
+
+      if (!isSingleBranch) {
+        const branch = branches[index];
+        const branchClientsList = clients.filter(
+          c => c.branch_id === branch.id
+        );
+
+        const branchTrucksList = trucks.filter(
+          t => t.branch_id === branch.id
+        );
+
+        setModalData({
+          title: branch.name,
+          clients: branchClientsList,
+          trucks: branchTrucksList
+        });
+      } else {
+        // Single branch → show clicked client details
+        const client = branchClients[index];
+        setModalData({
+          title: client.name,
+          clients: [client],
+          trucks: []
+        });
+      }
     }
   };
 
-  useImperativeHandle(ref, () => ({
-    refresh: fetchStats,
-  }));
+  const usePie =
+    selectedBranch === "all" && branches.length <= 4;
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const totalVisitors = visitors.length;
-  const activeVisitors = visitors.filter((v) => !v.timeOut).length;
-  const completedVisitors = visitors.filter((v) => v.timeOut).length;
-
-  const approvedAppointments = appointments;
-  const todayStr = new Date().toISOString().split("T")[0];
-  const todaysAppointments = approvedAppointments.filter((a) => {
-    if (!a.date) return false;
-    return new Date(a.date).toISOString().split("T")[0] === todayStr;
-  }).length;
-
-  const cardBg = darkMode
-    ? "bg-gray-900 text-gray-300"
-    : "bg-green-100 text-green-900";
-
-  const stats = [
-    { icon: UserIcon, label: "Total Visitors", value: totalVisitors, color: darkMode ? "text-green-400" : "text-green-700", neonColor: darkMode ? "#22c55e" : "#166534" },
-    { icon: UserIcon, label: "Active Visitors", value: activeVisitors, color: darkMode ? "text-blue-400" : "text-blue-700", neonColor: darkMode ? "#60a5fa" : "#1e3a8a" },
-    { icon: UserIcon, label: "Completed Visitors", value: completedVisitors, color: darkMode ? "text-red-400" : "text-red-700", neonColor: darkMode ? "#f87171" : "#b91c1c" },
-    { icon: CalendarIcon, label: "Approved Appointments", value: approvedAppointments.length, color: darkMode ? "text-purple-400" : "text-purple-700", neonColor: darkMode ? "#c084fc" : "#6b21a8" },
-    { icon: CalendarIcon, label: "Today's Appointments", value: todaysAppointments, color: darkMode ? "text-cyan-400" : "text-cyan-700", neonColor: darkMode ? "#22d3ee" : "#155e75" },
-  ];
+  const ChartComponent = usePie ? Pie : Doughnut;
 
   return (
-    <div className="w-full">
-      {/* Desktop / large screens */}
-      <div className="hidden md:grid grid-cols-3 lg:grid-cols-5 gap-4 auto-rows-fr">
-        {stats.map((card, i) => (
-          <article
-            key={i}
-            className={`flex flex-col gap-2 p-4 mb-4 rounded-lg shadow-md ${cardBg} transition-all duration-300 transform hover:scale-[1.03] hover:shadow-lg cursor-pointer relative overflow-hidden`}
+    <div
+      className={`rounded-2xl p-4 sm:p-6 w-full transition-all
+      ${
+        darkMode
+          ? "bg-gray-900 border border-white/10 text-gray-200"
+          : "bg-white border border-gray-200 shadow-sm text-black"
+      }`}
+    >
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h2 className="font-semibold text-lg sm:text-xl">
+          Branches Overview
+        </h2>
+
+        <select
+          className={`w-full sm:w-auto p-2 rounded-lg border
+          ${
+            darkMode
+              ? "bg-gray-800 border-gray-700 text-gray-300"
+              : "bg-gray-50 border-gray-300 text-black"
+          }`}
+          value={selectedBranch}
+          onChange={e => setSelectedBranch(e.target.value)}
+        >
+          <option value="all">All Branches</option>
+          {branches.map(b => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Chart */}
+      <div className="relative w-full h-[280px] sm:h-[350px] md:h-[400px]">
+        {chartData.labels.length > 0 && (
+          <>
+            <ChartComponent data={chartData} options={options} />
+
+            {/* Center Total */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-xs opacity-70">
+                {isSingleBranch ? "Total Clients" : "Total Clients"}
+              </span>
+              <span className="text-2xl font-bold">{total}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Modal */}
+      {modalData && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div
+            className={`rounded-xl p-6 w-[95%] max-w-lg max-h-[80vh] overflow-y-auto
+            ${darkMode ? "bg-gray-800 text-white" : "bg-white text-black"}`}
           >
-            <div className="flex items-center gap-2">
-              <card.icon className={`w-6 h-6 ${card.color}`} />
-              <span className="font-semibold text-sm">{card.label}</span>
-            </div>
-            <h2 className="text-2xl font-bold">{card.value}</h2>
-            <span
-              className="absolute bottom-0 left-0 w-full h-1 opacity-0 transition-all duration-300"
-              style={{
-                boxShadow: `0 0 10px ${card.neonColor}, 0 0 20px ${card.neonColor}`,
-                backgroundColor: card.neonColor,
-              }}
-            />
-            <style jsx>{`
-              article:hover span {
-                opacity: 1;
-              }
-            `}</style>
-          </article>
-        ))}
-      </div>
+            <h3 className="text-lg font-bold mb-4">{modalData.title}</h3>
 
-      {/* Mobile / small screens */}
-      <div className="md:hidden flex flex-col gap-2">
-        {stats.map((card, i) => {
-          const isOpen = openIndex === i;
-          return (
-            <div key={i} className={`rounded-lg shadow-md ${cardBg} overflow-hidden`}>
-              {/* Accordion Header */}
-              <button
-                className="w-full flex justify-between items-center p-4 cursor-pointer"
-                onClick={() => setOpenIndex(isOpen ? null : i)}
-              >
-                <div className="flex items-center gap-2">
-                  <card.icon className={`w-5 h-5 ${card.color}`} />
-                  <span className="font-semibold">{card.label}</span>
-                </div>
-                {isOpen ? (
-                  <ChevronUpIcon className="w-5 h-5" />
-                ) : (
-                  <ChevronDownIcon className="w-5 h-5" />
-                )}
-              </button>
+            {modalData.clients.length > 0 && (
+              <>
+                <h4 className="font-semibold mb-2">Clients</h4>
+                <ul className="space-y-1 text-sm mb-4">
+                  {modalData.clients.map(client => (
+                    <li
+                      key={client.id}
+                      className="border-b border-gray-500/20 pb-1"
+                    >
+                      {client.name}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
-              {/* Accordion Content */}
-              <div
-                className="transition-[max-height] duration-500 ease-in-out overflow-hidden"
-                style={{
-                  maxHeight: isOpen ? "200px" : "0px",
-                }}
-              >
-                <div className="p-4 border-t border-gray-300 dark:border-gray-700">
-                  <h2 className="text-2xl font-bold">{card.value}</h2>
-                  <span
-                    className="block w-full h-1 mt-2 rounded"
-                    style={{
-                      boxShadow: `0 0 10px ${card.neonColor}, 0 0 20px ${card.neonColor}`,
-                      backgroundColor: card.neonColor,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            {modalData.trucks.length > 0 && (
+              <>
+                <h4 className="font-semibold mb-2">Trucks</h4>
+                <ul className="space-y-1 text-sm">
+                  {modalData.trucks.map(truck => (
+                    <li
+                      key={truck.id}
+                      className="border-b border-gray-500/20 pb-1"
+                    >
+                      {truck.plate_number || truck.id}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            <button
+              onClick={() => setModalData(null)}
+              className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-});
-
-export default VisitorStats;
+}

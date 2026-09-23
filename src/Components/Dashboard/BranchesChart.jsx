@@ -13,6 +13,11 @@ import ChartDataLabels from "chartjs-plugin-datalabels";
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title, ChartDataLabels);
 
+// Single source of truth for the API base URL.
+// Set VITE_API_URL in your .env file (Vite root) so this never
+// needs to be edited again when your WSL2/LAN IP changes.
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function BranchesChart({ darkMode, trucks = [] }) {
   const [branches, setBranches] = useState([]);
   const [clients, setClients] = useState([]);
@@ -23,8 +28,8 @@ export default function BranchesChart({ darkMode, trucks = [] }) {
     const fetchData = async () => {
       try {
         const [branchesRes, clientsRes] = await Promise.all([
-          axios.get("https://tmvasbackend.arrowgo-logistics.com/api/branches"),
-          axios.get("https://tmvasbackend.arrowgo-logistics.com/api/branch-clients")
+          axios.get(`${API_URL}/api/branches`),
+          axios.get(`${API_URL}/api/branch-clients`)
         ]);
         setBranches(branchesRes.data);
         setClients(clientsRes.data);

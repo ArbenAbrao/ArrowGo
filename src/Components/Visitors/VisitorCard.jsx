@@ -1,243 +1,238 @@
-import { useState } from "react";
 import {
-  UserIcon,
-  PencilSquareIcon,
-  TrashIcon,
   ClockIcon,
-  CalendarDaysIcon,
-  IdentificationIcon,
+  PencilIcon,
+  TrashIcon,
   TagIcon,
-  TruckIcon,
-  ClipboardDocumentListIcon,
-  ChevronDownIcon,
+  BuildingOfficeIcon,
+  
 } from "@heroicons/react/24/outline";
 
-/* ================= STATUS COLORS ================= */
-const STATUS_COLORS = {
+/* ================= STATUS STYLES =================
+   Same naming/convention as TruckGrid's STATUS_STYLES so the two grids
+   read as one system — visitors only ever have Active or Completed
+   (no "Waiting" pre-check-in state), so that key is simply unused here. */
+const STATUS_STYLES = {
   Active: {
-    bg: "bg-green-100 dark:bg-green-600",
-    text: "text-green-900 dark:text-green-100",
-    border: "border-green-400",
-    dot: "bg-green-500",
+    dot: "bg-emerald-400",
+    bar: "bg-emerald-400",
   },
   Completed: {
-    bg: "bg-gray-100 dark:bg-gray-800",
-    text: "text-gray-900 dark:text-gray-100",
-    border: "border-gray-400",
-    dot: "bg-gray-500",
+    dot: "bg-gray-400",
+    bar: "bg-gray-400/60",
   },
 };
 
-/* ================= COMPANY COLORS ================= */
-const COMPANY_COLORS = [
-  "bg-blue-200 text-blue-900 border-blue-400 dark:bg-blue-600 dark:text-blue-100",
-  "bg-green-200 text-green-900 border-green-400 dark:bg-green-600 dark:text-green-100",
-  "bg-red-200 text-red-900 border-red-400 dark:bg-red-600 dark:text-red-100",
-  "bg-indigo-200 text-indigo-900 border-indigo-400 dark:bg-indigo-600 dark:text-indigo-100",
-  "bg-cyan-200 text-cyan-900 border-cyan-400 dark:bg-cyan-600 dark:text-cyan-100",
-];
+/* ================= SMALL HELPERS =================
+   Copied verbatim from TruckGrid.jsx rather than abstracted into a shared
+   module the two files didn't already share — keeps this a drop-in file
+   with no new import paths to wire up. */
 
-const getCompanyColor = (() => {
-  const cache = {};
-  return (company) => {
-    if (!company)
-      return "bg-gray-200 text-gray-900 border-gray-400 dark:bg-gray-600 dark:text-gray-100";
-    if (!cache[company]) {
-      cache[company] =
-        COMPANY_COLORS[Object.keys(cache).length % COMPANY_COLORS.length];
-    }
-    return cache[company];
+function Field({ label, darkMode, children }) {
+  return (
+    <div className="min-w-0">
+      <div
+        className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${
+          darkMode ? "text-gray-500" : "text-gray-400"
+        }`}
+      >
+        {label}
+      </div>
+
+      <div
+        className={`text-sm font-medium break-words ${
+          darkMode ? "text-gray-100" : "text-gray-800"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function IconButton({ icon: Icon, onClick, tone = "neutral", darkMode, title, iconClassName = "" }) {
+  const tones = {
+    neutral: darkMode
+      ? "bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
+      : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700",
+
+    danger: darkMode
+      ? "bg-white/5 text-gray-400 hover:bg-red-500/10 hover:text-red-400"
+      : "bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500",
+
+    success: "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
+
+    warning: "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20",
   };
-})();
 
-export default function VisitorCard({
-  visitor,
-  darkMode,
-  handleEditOpen,
-  handleDeleteOpen,
-  handleTimeOut,
-  userRole,
-}) {
-  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      disabled={!onClick}
+      className={`p-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50
+        ${!onClick ? "opacity-40 cursor-not-allowed" : tones[tone]}`}
+    >
+      <Icon className={`w-3.5 h-3.5 ${iconClassName}`} />
+    </button>
+  );
+}
+
+/* ================= VISITOR CARD ================= */
+
+export default function VisitorCard({ visitor, darkMode, handleEditOpen, handleDeleteOpen, handleTimeOut, userRole }) {
+  const canModify = ["Admin", "IT", "User"].includes(userRole);
 
   const isActive = !visitor.timeOut;
   const status = isActive ? "Active" : "Completed";
-  const statusColor = STATUS_COLORS[status];
+  const statusStyle = STATUS_STYLES[status];
 
-  /* ================= ROLE PERMISSIONS ================= */
-  const canModify =
-    userRole === "Admin" || userRole === "IT" || userRole === "User";
+  const formattedDate = visitor.date
+    ? new Date(visitor.date).toLocaleDateString("en-PH", {
+        timeZone: "Asia/Manila",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        weekday: "short",
+      })
+    : "--";
 
   return (
     <div
-      className={`w-full relative rounded-xl overflow-hidden border-2 mb-4 transition-all hover:shadow-lg hover:scale-[1.01]
-      ${statusColor.border} ${darkMode ? "bg-gray-900" : "bg-white"}`}
-    >
-      {/* HEADER */}
-<div
-  onClick={() => setIsOpen(!isOpen)}
-  className="px-4 py-3 flex items-center justify-between gap-4 cursor-pointer overflow-hidden"
->
-
-  {/* LEFT SIDE (All Info) */}
-  <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
-
-    {/* STATUS */}
-    <span className="px-2 py-1 text-xs font-semibold rounded-full border flex items-center gap-1 shrink-0 h-6">
-      <span className={`w-2 h-2 rounded-full ${statusColor.dot}`} />
-      {status}
-    </span>
-
-    {/* BRANCH */}
-    {visitor.branch && (
-      <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-indigo-100 text-indigo-900 dark:bg-indigo-600 dark:text-indigo-100 shrink-0 h-6">
-        {visitor.branch}
-      </span>
-    )}
-
-    {/* BADGE */}
-    {visitor.badgeNumber && (
-      <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-amber-100 text-amber-900 dark:bg-amber-600 dark:text-white shrink-0 h-6">
-        {visitor.badgeNumber}
-      </span>
-    )}
-
-    {/* COMPANY */}
-    {visitor.company && (
-      <span
-        className={`px-2 py-1 text-xs font-semibold rounded-full border shrink-0 h-6 ${getCompanyColor(
-          visitor.company
-        )}`}
-      >
-        {visitor.company}
-      </span>
-    )}
-
-    {/* VISITOR NAME */}
-    <div className="flex items-center gap-1 min-w-0">
-      <UserIcon className="w-4 h-4 text-cyan-500 shrink-0" />
-      <span className="font-bold truncate">
-        {visitor.visitorName}
-      </span>
-    </div>
-
-    {/* PERSON */}
-    <div className="flex items-center gap-1 min-w-0">
-      <UserIcon className="w-4 h-4 text-cyan-500 shrink-0" />
-      <span className="truncate">
-        {visitor.personToVisit}
-      </span>
-    </div>
-
-    {/* PURPOSE */}
-    <div className="flex items-center gap-1 min-w-0">
-      <ClipboardDocumentListIcon className="w-4 h-4 text-cyan-500 shrink-0" />
-      <span className="truncate">
-        {visitor.purpose}
-      </span>
-    </div>
-
-  </div>
-
-  {/* RIGHT SIDE (Buttons) */}
-  <div className="flex items-center gap-2 shrink-0">
-
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        if (canModify && isActive) handleTimeOut(visitor);
-      }}
-      disabled={!canModify || !isActive}
-      className={`p-2 rounded-full text-white transition
-        ${
-          !canModify || !isActive
-            ? "bg-gray-400 cursor-not-allowed opacity-60"
-            : "bg-yellow-400 hover:scale-105"
-        }`}
-    >
-      <ClockIcon className="w-4 h-4" />
-    </button>
-
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        if (canModify) handleEditOpen(visitor);
-      }}
-      disabled={!canModify}
-      className={`p-2 rounded-full text-white transition
-        ${
-          !canModify
-            ? "bg-gray-400 cursor-not-allowed opacity-60"
-            : "bg-blue-500 hover:scale-105"
-        }`}
-    >
-      <PencilSquareIcon className="w-4 h-4" />
-    </button>
-
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        if (canModify) handleDeleteOpen(visitor.id);
-      }}
-      disabled={!canModify}
-      className={`p-2 rounded-full text-white transition
-        ${
-          !canModify
-            ? "bg-gray-400 cursor-not-allowed opacity-60"
-            : "bg-red-500 hover:scale-105"
-        }`}
-    >
-      <TrashIcon className="w-4 h-4" />
-    </button>
-
-    <ChevronDownIcon
-      className={`w-5 h-5 transition-transform ${
-        isOpen ? "rotate-180" : ""
+      className={`flex w-full overflow-hidden rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${
+        darkMode
+          ? "bg-gray-900/70 border-white/10 hover:border-white/20 shadow-black/20"
+          : "bg-white border-gray-200 hover:border-gray-300 shadow-gray-200/50"
       }`}
-    />
-  </div>
-</div>
+    >
+      {/* ================= STATUS ACCENT BAR ================= */}
+      <div className={`w-1 shrink-0 ${statusStyle.bar}`} />
 
-      {/* DETAILS SECTION */}
-      {isOpen && (
-        <div className="px-4 pb-4 pt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 text-sm border-t">
-          <p className="flex items-center gap-2">
-            <IdentificationIcon className="w-4 h-4 text-indigo-500" />
-            <span className="font-semibold">ID:</span>
-            {visitor.idType} — {visitor.idNumber}
-          </p>
+      <div className="flex-1 min-w-0">
+        <div className="p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            {/* ================= STATUS / BRANCH / BADGE ================= */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+              {/* Status */}
+              <span className="inline-flex items-center gap-1.5 shrink-0">
+                <span className={`h-1.5 w-1.5 rounded-full ${statusStyle.dot}`} />
+                <span className={`text-xs font-semibold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
+                  {status}
+                </span>
+              </span>
 
-          <p className="flex items-center gap-2">
-            <TagIcon className="w-4 h-4 text-emerald-500" />
-            <span className="font-semibold">Badge:</span>
-            {visitor.badgeNumber}
-          </p>
+              {/* Branch */}
+              {visitor.branch && (
+                <span
+                  className={`inline-flex items-center gap-1 text-xs shrink-0 ${
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
+                  <BuildingOfficeIcon className="w-3.5 h-3.5" />
+                  {visitor.branch}
+                </span>
+              )}
 
-          <p className="flex items-center gap-2">
-            <TruckIcon className="w-4 h-4 text-orange-500" />
-            <span className="font-semibold">Vehicle:</span>
-            {visitor.vehicleMode}
-          </p>
+              {/* Badge number */}
+              {visitor.badgeNumber && (
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded-md border shrink-0 ${
+                    darkMode ? "bg-white/5 border-white/10 text-gray-300" : "bg-gray-50 border-gray-200 text-gray-600"
+                  }`}
+                >
+                  <TagIcon className="w-3 h-3" />
+                  {visitor.badgeNumber}
+                </span>
+              )}
+            </div>
 
-          <p className="flex items-center gap-2">
-            <CalendarDaysIcon className="w-4 h-4 text-blue-500" />
-            <span className="font-semibold">Date:</span>
-            {visitor.date}
-          </p>
+            {/* ================= ACTION BUTTONS ================= */}
+            {canModify && (
+              <div className="flex items-center gap-1 shrink-0">
+                <IconButton
+                  icon={ClockIcon}
+                  tone="warning"
+                  darkMode={darkMode}
+                  title="Time Out"
+                  onClick={isActive ? () => handleTimeOut(visitor) : null}
+                />
+                <IconButton
+                  icon={PencilIcon}
+                  tone="neutral"
+                  darkMode={darkMode}
+                  title="Edit"
+                  onClick={() => handleEditOpen(visitor)}
+                />
+                <IconButton
+                  icon={TrashIcon}
+                  tone="danger"
+                  darkMode={darkMode}
+                  title="Delete"
+                  onClick={() => handleDeleteOpen(visitor.id)}
+                />
+              </div>
+            )}
+          </div>
 
-          <p className="flex items-center gap-2">
-            <ClockIcon className="w-4 h-4 text-green-500" />
-            <span className="font-semibold">Time In:</span>
-            {visitor.timeIn}
-          </p>
+          {/* ================= PRIMARY INFORMATION ================= */}
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+            <Field label="Visitor" darkMode={darkMode}>
+              {visitor.visitorName || "--"}
+            </Field>
 
-          <p className="flex items-center gap-2">
-            <ClockIcon className="w-4 h-4 text-red-500" />
-            <span className="font-semibold">Time Out:</span>
-            {visitor.timeOut || "--"}
-          </p>
+            <Field label="Person to Visit" darkMode={darkMode}>
+              {visitor.personToVisit || "--"}
+            </Field>
+
+            <Field label="Purpose" darkMode={darkMode}>
+              {visitor.purpose || "--"}
+            </Field>
+
+            <Field label="Date" darkMode={darkMode}>
+              {formattedDate}
+            </Field>
+
+            <Field label="Time In" darkMode={darkMode}>
+              <span className={visitor.timeIn ? "text-emerald-400" : darkMode ? "text-gray-400" : "text-gray-500"}>
+                {visitor.timeIn || "--"}
+              </span>
+            </Field>
+
+            <Field label="Time Out" darkMode={darkMode}>
+              <span className={visitor.timeOut ? "text-amber-400" : darkMode ? "text-gray-400" : "text-gray-500"}>
+                {visitor.timeOut || "--"}
+              </span>
+            </Field>
+          </div>
+
+          {/* ================= ADDITIONAL INFO ================= */}
+          {(visitor.company || visitor.idType || visitor.idNumber || visitor.vehicleMode) && (
+            <div className={`mt-3 pt-3 border-t ${darkMode ? "border-white/10" : "border-gray-100"}`}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+                {visitor.company && (
+                  <Field label="Company" darkMode={darkMode}>
+                    {visitor.company}
+                  </Field>
+                )}
+
+                {(visitor.idType || visitor.idNumber) && (
+                  <Field label="ID" darkMode={darkMode}>
+                    {visitor.idType || "--"}
+                    {visitor.idNumber ? ` — ${visitor.idNumber}` : ""}
+                  </Field>
+                )}
+
+                {visitor.vehicleMode && (
+                  <Field label="Vehicle" darkMode={darkMode}>
+                    {visitor.vehicleMode}
+                    {visitor.vehicleDetails ? ` · ${visitor.vehicleDetails}` : ""}
+                  </Field>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

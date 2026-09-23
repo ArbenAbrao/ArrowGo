@@ -4,7 +4,53 @@ const bcrypt = require("bcrypt");
 const requestIp = require("request-ip");
 const axios = require("axios");
 const { dbPromise } = require("../db");
+const crypto = require("crypto"); // <-- ADD THIS
+const useragent = require("useragent");
 
+
+router.post("/heartbeat", authMiddleware, async (req, res) => {
+  try {
+    await dbPromise.query(
+      "UPDATE accounts SET last_active = NOW() WHERE id = ?",
+      [req.user.id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Heartbeat failed" });
+  }
+});
+
+/* ================= GET LOGIN LOGS ================= */
+router.get("/login-logs", async (req, res) => {
+  try {
+    const [rows] = await dbPromise.query(
+  `SELECT 
+      ll.id, 
+      ll.user_id, 
+      ll.username_or_email, 
+      ll.status, 
+      ll.ip_address, 
+      ll.location, 
+      ll.device, 
+      ll.browser, 
+      ll.os, 
+      ll.session_token,
+      ll.created_at, -- convert UTC to PH time
+      CONCAT(a.first_name, ' ', a.last_name) AS name
+   FROM login_logs ll
+   LEFT JOIN accounts a ON ll.user_id = a.id
+   ORDER BY ll.created_at DESC
+   LIMIT 500`
+);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 /* ================= HELPER: GET LOCATION FROM IP ================= */
 async function getLocationFromIP(ip) {
   try {
@@ -71,103 +117,118 @@ router.post("/accounts", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { usernameOrEmail, password } = req.body;
 
-  try {
-    let ip = requestIp.getClientIp(req);
+  let ip = requestIp.getClientIp(req);
+  if (ip && ip.includes("::ffff:")) ip = ip.split("::ffff:")[1];
 
-// Normalize IPv6
-if (ip && ip.includes("::ffff:")) {
-  ip = ip.split("::ffff:")[1];
-}
+  const location = await getLocationFromIP(ip);
 
+  const [rows] = await dbPromise.query(
+    "SELECT * FROM accounts WHERE username = ? OR email = ? LIMIT 1",
+    [usernameOrEmail, usernameOrEmail]
+  );
 
-console.log("Detected IP:", ip);
-
-const location = await getLocationFromIP(ip);
-
-console.log("Detected Location:", location);
-
-
-    const [rows] = await dbPromise.query(
-      "SELECT * FROM accounts WHERE username = ? OR email = ? LIMIT 1",
-      [usernameOrEmail, usernameOrEmail]
-    );
-
-    if (!rows.length) {
-      await dbPromise.query(
-        `INSERT INTO login_logs (username_or_email, status, ip_address, location)
-         VALUES (?, 'FAILED', ?, ?)`,
-        [usernameOrEmail, ip, location]
-      );
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const user = rows[0];
-
-    if (user.is_active === 0) {
-      return res.status(403).json({ message: "Account is disabled" });
-    }
-
-    const match = await bcrypt.compare(password, user.password);
-
-    if (!match) {
-      await dbPromise.query(
-        `INSERT INTO login_logs (user_id, username_or_email, status, ip_address, location)
-         VALUES (?, ?, 'FAILED', ?, ?)`,
-        [user.id, usernameOrEmail, ip, location]
-      );
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Update last active
+  if (!rows.length) {
     await dbPromise.query(
-      "UPDATE accounts SET last_active = NOW() WHERE id = ?",
-      [user.id]
-    );
+  `INSERT INTO login_logs 
+     (username_or_email, status, ip_address, location, created_at)
+   VALUES (?, 'FAILED', ?, ?, NOW())`,
+  [usernameOrEmail, ip, location]
+);
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
 
-    // Log successful login
+  const user = rows[0];
+  if (user.is_active === 0)
+    return res.status(403).json({ message: "Account is disabled" });
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
     await dbPromise.query(
       `INSERT INTO login_logs (user_id, username_or_email, status, ip_address, location)
-       VALUES (?, ?, 'SUCCESS', ?, ?)`,
+       VALUES (?, ?, 'FAILED', ?, ?)`,
       [user.id, usernameOrEmail, ip, location]
     );
-
-    res.json({
-      message: "Login successful",
-      user: {
-        id: user.id,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        role: user.role,
-        branch: user.branch,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(401).json({ message: "Invalid credentials" });
   }
+
+  // --- Generate session token ---
+  const sessionToken = crypto.randomBytes(32).toString("hex");
+
+  // Parse device info
+  const agent = useragent.parse(req.headers["user-agent"]);
+  const deviceInfo = `${agent.family} on ${agent.os.toString()}`;
+
+  // const isSuspicious = await checkSuspiciousLogin(user.id, deviceInfo, ip);
+
+  // --- Update account ---
+  await dbPromise.query(
+    `UPDATE accounts 
+     SET last_active = NOW(), 
+         last_device = ?, 
+         last_login_ip = ?, 
+         current_session_token = ?
+     WHERE id = ?`,
+    [deviceInfo, ip, sessionToken, user.id]
+  );
+
+  // --- Log login ---
+  await dbPromise.query(
+  `INSERT INTO login_logs 
+     (user_id, username_or_email, status, ip_address, location, device, browser, os, session_token, created_at)
+   VALUES (?, ?, 'SUCCESS', ?, ?, ?, ?, ?, ?, NOW())`,
+  [user.id, usernameOrEmail, ip, location, agent.family, agent.family, agent.os.toString(), sessionToken]
+);
+
+  res.json({
+    message: "Login successful",
+    user: {
+      id: user.id,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      role: user.role,
+      branch: user.branch,
+      sessionToken,
+      lastDevice: deviceInfo,
+      lastLoginIp: ip,
+      //isSuspicious
+    },
+  });
 });
 
-/* ================= LOGIN HISTORY ================= */
-router.get("/login-logs", async (req, res) => {
-  try {
-    const [rows] = await dbPromise.query(`
-      SELECT
-        l.id,
-        CONCAT(a.first_name, ' ', a.last_name) AS name,
-        l.username_or_email,
-        l.status,
-        l.location,
-        l.created_at
-      FROM login_logs l
-      LEFT JOIN accounts a ON l.user_id = a.id
-      ORDER BY l.created_at DESC
-    `);
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+/* ================= AUTH MIDDLEWARE ================= */
+async function authMiddleware(req, res, next) {
+  const token = req.headers["x-session-token"];
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  const [rows] = await dbPromise.query(
+    "SELECT * FROM accounts WHERE current_session_token = ?",
+    [token]
+  );
+
+  if (!rows.length) return res.status(401).json({ message: "Session expired" });
+
+  const user = rows[0];
+  const lastActive = new Date(user.last_active);
+  const now = new Date();
+
+  // Auto-logout after 15 minutes of inactivity
+  if ((now - lastActive) / 1000 / 60 > 15) {
+    await dbPromise.query(
+      "UPDATE accounts SET current_session_token = NULL WHERE id = ?",
+      [user.id]
+    );
+    return res.status(401).json({ message: "Session expired due to inactivity" });
   }
-});
+
+  // Update last_active on every request
+  await dbPromise.query(
+    "UPDATE accounts SET last_active = NOW() WHERE id = ?",
+    [user.id]
+  );
+
+  req.user = user;
+  next();
+}
 
 /* ================= GET ACCOUNT BY ID (FULL INFO) ================= */
 router.get("/accounts/:id", async (req, res) => {
@@ -230,25 +291,8 @@ router.put("/accounts/:id/change-password", async (req, res) => {
   }
 });
 
-/* ================= UPDATE PROFILE ================= */
-router.put("/accounts/:id", async (req, res) => {
-  const { firstName, lastName, email, username } = req.body;
-  const { id } = req.params;
 
-  try {
-    await dbPromise.query(
-      `UPDATE accounts
-       SET first_name = ?, last_name = ?, email = ?, username = ?
-       WHERE id = ?`,
-      [firstName, lastName, email, username, id]
-    );
 
-    res.json({ message: "Profile updated successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
 
 /* ================= ADMIN RESET PASSWORD ================= */
 router.put("/admin/accounts/:id/reset-password", async (req, res) => {

@@ -2,11 +2,19 @@
 import { useLoader } from "../Context/LoaderContext";
 import logo from "../assets/arrowgo-logo.png";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
+const STATUS_MESSAGES = [
+  "ESTABLISHING UPLINK",
+  "SYNCING FLEET DATA",
+  "VERIFYING ROUTES",
+  "LOADING DASHBOARD",
+];
 
- export default function PageLoader({ darkMode, sidebarWidth = 250 }) {
+export default function PageLoader({ darkMode, sidebarWidth = 250 }) {
   const { loading } = useLoader();
   const [visible, setVisible] = useState(false);
+  const [statusIndex, setStatusIndex] = useState(0);
 
   useEffect(() => {
     if (loading) {
@@ -17,211 +25,286 @@ import { useEffect, useState } from "react";
     }
   }, [loading]);
 
+  useEffect(() => {
+    if (!visible) return;
+    const interval = setInterval(() => {
+      setStatusIndex((i) => (i + 1) % STATUS_MESSAGES.length);
+    }, 1400);
+    return () => clearInterval(interval);
+  }, [visible]);
+
   if (!loading && !visible) return null;
 
+  const accentBlue = "#2563EB";
+  const accentGreen = "#059669";
+  const bg = darkMode ? "#0f172a" : "#ffffff";
+  const textColor = darkMode ? "#e2e8f0" : "#0f172a";
+  const mutedColor = darkMode ? "#64748b" : "#94a3b8";
+  const gridLine = darkMode ? "rgba(148,163,184,0.08)" : "rgba(15,23,42,0.05)";
 
-  
   const overlayStyle = {
     position: "fixed",
     top: 0,
     bottom: 0,
     right: 0,
-    left: `${sidebarWidth}px`, // dynamic width
+    left: `${sidebarWidth}px`,
     zIndex: 9999,
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: darkMode ? "#0f172a" : "#ffffff",
-    color: darkMode ? "#d1d5db" : "#111827",
+    backgroundColor: bg,
+    color: textColor,
     transition: "opacity 0.3s ease",
     opacity: loading ? 1 : 0,
+    overflow: "hidden",
   };
-  
 
   return (
     <div style={overlayStyle}>
-      {/* Logo */}
-      <img
-        src={logo}
-        alt="ArrowGo Logo"
+      {/* faint background grid */}
+      <div
+        className="loader-grid-bg"
         style={{
-          width: "110px",
-          marginBottom: "18px",
-          animation: "fadeIn 0.6s ease",
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `linear-gradient(${gridLine} 1px, transparent 1px), linear-gradient(90deg, ${gridLine} 1px, transparent 1px)`,
+          backgroundSize: "42px 42px",
+          maskImage:
+            "radial-gradient(circle at center, black 0%, transparent 75%)",
+          WebkitMaskImage:
+            "radial-gradient(circle at center, black 0%, transparent 75%)",
         }}
       />
 
-      {/* Labels */}
+      {/* scan frame with logo */}
+      <div className="loader-frame">
+        <div
+          className="loader-ring"
+          style={{ borderColor: accentBlue }}
+        />
+        <div
+          className="loader-ring loader-ring-delay"
+          style={{ borderColor: accentGreen }}
+        />
+        <div
+          className="loader-scan-beam"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${accentBlue}, transparent)`,
+          }}
+        />
+
+        {["tl", "tr", "bl", "br"].map((corner) => (
+          <span
+            key={corner}
+            className={`loader-corner loader-corner-${corner}`}
+            style={{ borderColor: accentBlue }}
+          />
+        ))}
+
+        <img src={logo} alt="ArrowGo Logo" className="loader-logo" />
+      </div>
+
+      {/* wordmark */}
       <h2
         style={{
           margin: 0,
-          fontWeight: "600",
-          fontSize: "20px",
-          letterSpacing: "0.5px",
+          marginTop: "22px",
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontWeight: 600,
+          fontSize: "22px",
+          letterSpacing: "1px",
+          textTransform: "uppercase",
         }}
       >
-        ArrowGo-Logistics Inc.
+        ArrowGo <span style={{ color: mutedColor }}>Logistics Inc.</span>
       </h2>
 
-      <p
+      {/* gate-log style status ticker */}
+      <div
         style={{
-          marginTop: "6px",
-          opacity: 0.7,
-          fontSize: "14px",
+          marginTop: "10px",
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: "12px",
+          letterSpacing: "0.5px",
+          color: accentBlue,
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          minHeight: "16px",
         }}
       >
-        Loading, please wait...
-      </p>
+        <span style={{ color: mutedColor }}>{">"}</span>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={statusIndex}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+          >
+            {STATUS_MESSAGES[statusIndex]}
+          </motion.span>
+        </AnimatePresence>
+        <span className="loader-cursor">_</span>
+      </div>
 
-      {/* Car Loader */}
-      <div className="car-container">
-        <div className="car">
-          <div className="window"></div>
-          <div className="cargo-details"></div>
-          <div className="door"></div>
-          <div className="lights"></div>
-        </div>
-        <div className="wheels wheels1"></div>
-        <div className="wheels wheels2"></div>
-        <div className="street"></div>
+      {/* indeterminate progress bar */}
+      <div
+        className="loader-progress-track"
+        style={{
+          backgroundColor: darkMode
+            ? "rgba(148,163,184,0.15)"
+            : "rgba(15,23,42,0.08)",
+        }}
+      >
+        <div
+          className="loader-progress-fill"
+          style={{
+            background: `linear-gradient(90deg, ${accentBlue}, ${accentGreen})`,
+          }}
+        />
       </div>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .car-container {
+        .loader-frame {
           position: relative;
-          width: 110px;
-          height: 110px;
-          margin-top: 25px;
+          width: 96px;
+          height: 96px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
-        .car {
+        .loader-logo {
+          width: 52px;
+          height: auto;
+          position: relative;
+          z-index: 2;
+          animation: loader-breathe 2.2s ease-in-out infinite;
+          filter: drop-shadow(0 0 10px rgba(37,99,235,0.35));
+        }
+
+        .loader-ring {
           position: absolute;
-          width: 48px;
-          height: 28px;
-          left: 20px;
-          top: 40px;
-          background-color: ${darkMode ? "#3b82f6" : "#1f4fd8"};
-          border-top: 2px solid ${darkMode ? "#2563eb" : "#1740a5"};
-          animation: bounce 0.4s infinite;
-          box-shadow: ${
-            darkMode
-              ? "0 0 18px rgba(59,130,246,0.6)"
-              : "0 4px 10px rgba(0,0,0,0.08)"
-          };
-          border-radius: 4px;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          border: 1.5px solid;
+          opacity: 0.6;
+          animation: loader-ring-pulse 2s ease-out infinite;
         }
 
-        @keyframes bounce {
-          0% { top: 40px; }
-          50% { top: 38px; }
+        .loader-ring-delay {
+          animation-delay: 1s;
         }
 
-        .car::before {
-          content: "";
+        .loader-scan-beam {
           position: absolute;
-          width: 70px;
-          height: 4px;
-          background-color: ${darkMode ? "#1e293b" : "rgb(46,46,81)"};
-          bottom: -2px;
+          top: 0;
+          left: 6px;
+          right: 6px;
+          height: 2px;
+          opacity: 0.8;
+          animation: loader-scan 2.4s linear infinite;
         }
 
-        .car::after {
-          content: "";
-          position: absolute;
-          width: 20px;
-          height: 22px;
-          right: -20px;
-          bottom: 2px;
-          background-color: #e5e5e5;
-          clip-path: polygon(0% 0%, 50% 0, 100% 60%, 100% 100%, 0% 100%);
-        }
-
-        .window {
-          position: absolute;
-          width: 12px;
-          height: 8px;
-          right: -16px;
-          top: 6px;
-          background-color: #7ebfe2;
-          clip-path: polygon(0% 0%, 40% 0, 100% 100%, 0% 100%);
-        }
-
-        .wheels {
+        .loader-corner {
           position: absolute;
           width: 14px;
           height: 14px;
-          border-radius: 50%;
-          background-color: #bcbcbc;
-          border: 2px solid #040404;
-          bottom: 30px;
-          left: 30px;
-          animation: rotation 0.3s linear infinite;
+          opacity: 0.85;
+          animation: loader-corner-pulse 2.2s ease-in-out infinite;
+        }
+        .loader-corner-tl {
+          top: -6px;
+          left: -6px;
+          border-top: 2px solid;
+          border-left: 2px solid;
+        }
+        .loader-corner-tr {
+          top: -6px;
+          right: -6px;
+          border-top: 2px solid;
+          border-right: 2px solid;
+        }
+        .loader-corner-bl {
+          bottom: -6px;
+          left: -6px;
+          border-bottom: 2px solid;
+          border-left: 2px solid;
+        }
+        .loader-corner-br {
+          bottom: -6px;
+          right: -6px;
+          border-bottom: 2px solid;
+          border-right: 2px solid;
         }
 
-        .wheels2 { left: 75px; }
-
-        @keyframes rotation {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        .loader-progress-track {
+          margin-top: 20px;
+          width: 220px;
+          height: 3px;
+          border-radius: 999px;
+          overflow: hidden;
+          position: relative;
         }
 
-        .cargo-details {
+        .loader-progress-fill {
           position: absolute;
-          width: 44px;
-          height: 4px;
-          background-color: #6cc24a;
-          left: 4px;
-          top: 3px;
-          box-shadow:
-            0px 7px #6cc24a,
-            0px 14px #6cc24a,
-            0px 21px #6cc24a;
-        }
-
-        .door {
-          position: absolute;
-          width: 2px;
-          height: 2px;
-          background-color: black;
-          right: -7px;
-          bottom: 12px;
-        }
-
-        .lights {
-          position: absolute;
-          width: 3px;
-          height: 6px;
-          background-color: #ffedbf;
-          right: -20px;
-          bottom: 0;
-          animation: lighting1 1.5s infinite ease-in-out;
-        }
-
-        @keyframes lighting1 {
-          0% { background-color: #ffedbf; }
-          50% { background-color: #ffc800; }
-        }
-
-        .street {
-          position: absolute;
-          height: 2px;
-          width: 18px;
-          background-color: ${darkMode ? "#64748b" : "black"};
-          bottom: 30px;
+          top: 0;
           left: 0;
-          box-shadow: 22px 0, 44px 0, 66px 0, 88px 0;
-          animation: motion 2s linear infinite;
+          width: 40%;
+          height: 100%;
+          border-radius: 999px;
+          animation: loader-sweep 1.6s ease-in-out infinite;
         }
 
-        @keyframes motion {
-          from { left: 0; }
-          to { left: -110px; }
+        .loader-cursor {
+          animation: loader-blink 1s steps(1) infinite;
+        }
+
+        @keyframes loader-breathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.06); }
+        }
+
+        @keyframes loader-ring-pulse {
+          0% { transform: scale(0.75); opacity: 0.7; }
+          100% { transform: scale(1.55); opacity: 0; }
+        }
+
+        @keyframes loader-scan {
+          0% { top: 4px; opacity: 0; }
+          10% { opacity: 0.8; }
+          90% { opacity: 0.8; }
+          100% { top: 92px; opacity: 0; }
+        }
+
+        @keyframes loader-corner-pulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+
+        @keyframes loader-sweep {
+          0% { left: -40%; }
+          100% { left: 100%; }
+        }
+
+        @keyframes loader-blink {
+          0%, 49% { opacity: 1; }
+          50%, 100% { opacity: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .loader-logo,
+          .loader-ring,
+          .loader-scan-beam,
+          .loader-corner,
+          .loader-progress-fill,
+          .loader-cursor {
+            animation: none !important;
+          }
         }
       `}</style>
     </div>

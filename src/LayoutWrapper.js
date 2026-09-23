@@ -1,8 +1,11 @@
+import axios from "axios";
+
 // src/LayoutWrapper.js
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useLoader } from "./Context/LoaderContext";
+import { useNavigate } from "react-router-dom";
 
 /* Components */
 import Header from "./Components/Header";
@@ -24,8 +27,17 @@ import Settings from "./Pages/Settings";
 import Branches from "./Pages/Branches";
 import VehicleManagement from "./Pages/VehicleManagement";
 import Walkins from "./Pages/Walkins";
+import Drivers from "./Pages/Drivers";
+import FleetMonitoring from "./Pages/FleetMonitoring";
+
+// Keep these in sync with the widths used in Components/Header.jsx
+// (isCollapsed ? 76 : 248)
+const SIDEBAR_WIDTH_COLLAPSED = 76;
+const SIDEBAR_WIDTH_EXPANDED = 248;
 
 export default function LayoutWrapper() {
+  const navigate = useNavigate();
+
   const location = useLocation();
   const { setLoading } = useLoader();
 
@@ -90,23 +102,85 @@ export default function LayoutWrapper() {
   }, [location.pathname, setLoading, isDesktop]);
 
   /* ===============================
+   AUTO LOGOUT AFTER 15 MINUTES
+================================ */
+useEffect(() => {
+  const INACTIVITY_TIME = 15 * 60 * 1000; // 15 minutes
+  let inactivityTimer;
+
+  const resetTimer = () => {
+    clearTimeout(inactivityTimer);
+
+    inactivityTimer = setTimeout(() => {
+      localStorage.removeItem("user");
+localStorage.removeItem("sessionToken");
+localStorage.removeItem("isLoggedIn");
+
+alert("Session expired due to inactivity");
+
+navigate("/", { replace: true });
+    }, INACTIVITY_TIME);
+  };
+
+  const events = ["mousemove", "keydown", "click", "scroll"];
+
+  events.forEach((event) => window.addEventListener(event, resetTimer));
+
+  resetTimer(); // start timer
+
+  return () => {
+    events.forEach((event) =>
+      window.removeEventListener(event, resetTimer)
+    );
+    clearTimeout(inactivityTimer);
+  };
+}, [navigate]);
+
+
+
+/* ===============================
+   HEARTBEAT (UPDATE ONLINE STATUS)
+================================ */
+useEffect(() => {
+  const token = localStorage.getItem("sessionToken");
+
+  if (!token) return;
+
+  const interval = setInterval(() => {
+    axios.post(
+      "http://192.168.254.131:5000/api/heartbeat",
+      {},
+      {
+        headers: {
+          "x-session-token": token,
+        },
+      }
+    ).catch(() => {});
+  }, 60000); // every 1 minute
+
+  return () => clearInterval(interval);
+}, []);
+
+  /* ===============================
      SPECIAL PUBLIC PAGES
   =============================== */
   if (isSpecialPage) {
     return (
-      <AnimatePresence mode="sync">
-        <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<Welcome />} />
-          <Route path="/appointment" element={<Appointment />} />
-          <Route path="/truck-request" element={<TruckRequest />} />
-          <Route
-            path="/truck-details/:plateNumber"
-            element={<TruckDetails />}
-          />
-          <Route path="/walkins" element={<Walkins />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
+      <div className="overflow-x-hidden w-full">
+        <AnimatePresence mode="sync">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<Welcome />} />
+            <Route path="/appointment" element={<Appointment />} />
+            <Route path="/truck-request" element={<TruckRequest />} />
+            <Route
+              path="/truck-details/:plateNumber"
+              element={<TruckDetails />}
+            />
+            <Route path="/walkins" element={<Walkins />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+      </div>
     );
   }
 
@@ -118,12 +192,12 @@ export default function LayoutWrapper() {
       {isDesktop && (
         <PageLoader
           darkMode={darkMode}
-          sidebarWidth={isCollapsed ? 70 : 240}
+          sidebarWidth={isCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED}
         />
       )}
 
       <div
-        className={`flex min-h-screen ${
+        className={`flex min-h-screen w-full overflow-x-hidden ${
           darkMode ? "bg-gray-800" : "bg-gray-50"
         }`}
       >
@@ -136,10 +210,15 @@ export default function LayoutWrapper() {
         />
 
         <motion.div
-          className="flex-1 min-h-screen relative"
+          className="flex-1 min-h-screen min-w-0 relative"
           animate={{
-            marginLeft: isDesktop ? (isCollapsed ? 70 : 240) : 0,
+            marginLeft: isDesktop
+              ? isCollapsed
+                ? SIDEBAR_WIDTH_COLLAPSED
+                : SIDEBAR_WIDTH_EXPANDED
+              : 0,
           }}
+          transition={{ type: "spring", stiffness: 340, damping: 34 }}
         >
           <AnimatePresence mode="sync">
             <Routes location={location} key={location.pathname}>
@@ -188,6 +267,15 @@ export default function LayoutWrapper() {
   }
 />
 
+<Route
+  path="/fleet-monitoring"
+  element={
+    <ProtectedRoute allowedRoles={["admin", "it"]}>
+      <FleetMonitoring darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
+
               <Route
                 path="/branches"
                 element={
@@ -196,6 +284,14 @@ export default function LayoutWrapper() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+  path="/drivers"
+  element={
+    <ProtectedRoute allowedRoles={["it"]}>
+      <Drivers darkMode={darkMode} />
+    </ProtectedRoute>
+  }
+/>
 
               <Route
                 path="/accounts"

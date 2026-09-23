@@ -1,3 +1,5 @@
+require("dotenv").config(); // ✅ must be first — everything below reads process.env
+
 const express = require("express");
 const cors = require("cors");
 
@@ -5,13 +7,14 @@ const cors = require("cors");
 const trucksRoutes = require("./routes/trucks");
 const typesRoutes = require("./routes/types");
 const visitorRoutes = require("./routes/visitors");
-const requestRoutes = require("./routes/requests"); 
+const requestRoutes = require("./routes/requests");
 const truckRequestRoutes = require("./routes/truckrequest");
 const appointmentRequestRoutes = require("./routes/appointmentRequests");
 const requestStatsRoutes = require("./routes/requestStats");
 const requestAnalyticsRoutes = require("./routes/requestAnalytics");
 const accountsRoutes = require("./routes/accounts");
 const branchesRoutes = require("./routes/branches"); // ✅ ADD THIS
+const fleetIssuesRoutes = require("./routes/fleetIssues"); // ✅ ADD THIS
 
 
 const app = express();
@@ -35,6 +38,7 @@ app.use("/api/request-stats", requestStatsRoutes);
 app.use("/api/requests", requestAnalyticsRoutes); // analytics
 app.use("/api", accountsRoutes);
 app.use("/api", branchesRoutes); // ✅ THIS WAS MISSING
+app.use("/api", fleetIssuesRoutes); // ✅ THIS WAS MISSING
 
 // ================= TEST ROUTE =================
 app.get("/", (req, res) => {
@@ -62,5 +66,6 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("✅ Server successfully started");
   console.log(`👉 Local:   http://localhost:${PORT}`);
   console.log(`👉 Network: http://<your-ip>:${PORT}`);
+  console.log(`👉 DB host: ${process.env.DB_HOST || "(not set — check .env)"}`);
   console.log("======================================");
 });

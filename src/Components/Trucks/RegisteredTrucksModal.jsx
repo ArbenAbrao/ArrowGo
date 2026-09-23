@@ -19,6 +19,13 @@ const tableRowVariants = {
   exit: { opacity: 0, y: -10 },
 };
 
+// Single source of truth for the API base URL.
+// Set REACT_APP_API_URL in your .env file (frontend root) so this never
+// needs to be edited again when your WSL2/LAN IP changes. CRA only
+// reads REACT_APP_* env vars, and only at build/dev-server start time,
+// so restart 'npm start' after changing .env.
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function RegisteredTrucksModal({ open, onClose, darkMode = false }) {
   const [trucks, setTrucks] = useState([]);
   const [selectedClient, setSelectedClient] = useState("");
@@ -44,7 +51,7 @@ const [selectedBranch, setSelectedBranch] = useState("");
   useEffect(() => {
     if (!open) return;
     axios
-      .get("https://tmvasbackend.arrowgo-logistics.com/api/clients")
+      .get(`${API_URL}/api/clients`)
       .then((res) => setTrucks(res.data.sort((a, b) => a.id - b.id)))
       .catch(console.error);
   }, [open]);
@@ -136,7 +143,7 @@ useEffect(() => setCurrentPage(1), [selectedClient, selectedBranch, searchTerm, 
   const deleteTruck = async (id) => {
     if (!window.confirm("Delete this truck?")) return;
     try {
-      await axios.delete(`https://tmvasbackend.arrowgo-logistics.com/api/clients/${id}`);
+      await axios.delete(`${API_URL}/api/clients/${id}`);
       setTrucks((prev) => prev.filter((t) => Number(t.id) !== Number(id)));
       setSelectedIds((prev) => prev.filter((i) => Number(i) !== Number(id)));
       setCurrentPage((prev) => Math.max(prev - 1, 1));
@@ -150,7 +157,7 @@ useEffect(() => setCurrentPage(1), [selectedClient, selectedBranch, searchTerm, 
     if (!selectedIds.length) return;
     if (!window.confirm("Delete selected trucks?")) return;
     try {
-      await Promise.all(selectedIds.map((id) => axios.delete(`https://tmvasbackend.arrowgo-logistics.com/api/clients/${id}`)));
+      await Promise.all(selectedIds.map((id) => axios.delete(`${API_URL}/api/clients/${id}`)));
       setTrucks((prev) => prev.filter((t) => !selectedIds.includes(Number(t.id))));
       setSelectedIds([]);
       setCurrentPage(1);
@@ -419,7 +426,7 @@ ${t.payloadCapacity || ""}`
 
                               <td className="border p-2 text-center">
                                 <img
-                                  src={`https://tmvasbackend.arrowgo-logistics.com/api/clients/${t.id}/qrcode`}
+                                  src={`${API_URL}/api/clients/${t.id}/qrcode`}
                                   alt={`QR code for truck ${t.plateNumber}`}
                                   className="w-14 h-14 mx-auto cursor-pointer hover:scale-110 transition"
                                   onClick={() => openTruckDetails(t)}
