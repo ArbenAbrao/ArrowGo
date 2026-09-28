@@ -6,6 +6,7 @@ const axios = require("axios");
 const { dbPromise } = require("../db");
 const crypto = require("crypto"); // <-- ADD THIS
 const useragent = require("useragent");
+const { sendOtpEmail } = require("../mailer"); // <-- ADD THIS (adjust path if mailer.js lives elsewhere)
 
 
 router.post("/heartbeat", authMiddleware, async (req, res) => {
@@ -193,6 +194,139 @@ router.post("/login", async (req, res) => {
       //isSuspicious
     },
   });
+});
+
+/* ================= FORGOT PASSWORD: SEND OTP ================= */
+// Body: { email }
+// NOTE: unregistered emails now return 404 with a specific message so the
+// frontend can toast it. This intentionally gives up the previous
+// anti-enumeration protection (the generic "if registered..." response) —
+// fine for most apps, but if this route ever needs hardening, rate-limit
+// it so it can't be used to bulk-check which emails exist.
+router.post("/forgot-password/send-otp", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: "Email is required" });
+
+  try {
+    const [rows] = await dbPromise.query(
+      "SELECT id, first_name, email FROM accounts WHERE email = ? LIMIT 1",
+      [email]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "No account found with that email address." });
+    }
+
+    const account = rows[0];
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000)); // 6 digits
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Invalidate any previous unused codes for this account first
+    await dbPromise.query(
+      "UPDATE password_resets SET is_used = 1 WHERE account_id = ? AND is_used = 0",
+      [account.id]
+    );
+
+    await dbPromise.query(
+      `INSERT INTO password_resets (account_id, otp_code, expires_at)
+       VALUES (?, ?, ?)`,
+      [account.id, otpCode, expiresAt]
+    );
+
+    await sendOtpEmail(account.email, otpCode, account.first_name);
+
+    res.json({ message: "Reset code sent to your email." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Could not send reset code. Please try again." });
+  }
+});
+
+/* ================= FORGOT PASSWORD: VERIFY OTP ================= */
+// Body: { email, otp } -> returns { resetToken } on success
+router.post("/forgot-password/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp)
+    return res.status(400).json({ message: "Email and code are required" });
+
+  try {
+    const [accountRows] = await dbPromise.query(
+      "SELECT id FROM accounts WHERE email = ? LIMIT 1",
+      [email]
+    );
+    if (!accountRows.length) {
+      return res.status(400).json({ message: "Invalid or expired code" });
+    }
+    const accountId = accountRows[0].id;
+
+    const [resetRows] = await dbPromise.query(
+      `SELECT * FROM password_resets
+       WHERE account_id = ? AND otp_code = ? AND is_used = 0 AND expires_at > NOW()
+       ORDER BY id DESC LIMIT 1`,
+      [accountId, otp]
+    );
+
+    if (!resetRows.length) {
+      return res.status(400).json({ message: "Invalid or expired code" });
+    }
+
+    // Issue a short-lived, single-use reset token. The reset-password step
+    // trusts this token, not the OTP again, so the OTP can't be replayed.
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const newExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // fresh 10-minute window
+
+    await dbPromise.query(
+      `UPDATE password_resets
+       SET is_verified = 1, reset_token = ?, expires_at = ?
+       WHERE id = ?`,
+      [resetToken, newExpiresAt, resetRows[0].id]
+    );
+
+    res.json({ message: "Code verified", resetToken });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* ================= FORGOT PASSWORD: RESET PASSWORD ================= */
+// Body: { resetToken, newPassword }
+router.post("/forgot-password/reset-password", async (req, res) => {
+  const { resetToken, newPassword } = req.body;
+  if (!resetToken || !newPassword)
+    return res.status(400).json({ message: "Missing reset token or new password" });
+
+  try {
+    const [resetRows] = await dbPromise.query(
+      `SELECT * FROM password_resets
+       WHERE reset_token = ? AND is_verified = 1 AND is_used = 0 AND expires_at > NOW()
+       LIMIT 1`,
+      [resetToken]
+    );
+
+    if (!resetRows.length) {
+      return res
+        .status(400)
+        .json({ message: "This reset session has expired. Please start again." });
+    }
+
+    const resetRow = resetRows[0];
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await dbPromise.query("UPDATE accounts SET password = ? WHERE id = ?", [
+      hashed,
+      resetRow.account_id,
+    ]);
+
+    await dbPromise.query("UPDATE password_resets SET is_used = 1 WHERE id = ?", [
+      resetRow.id,
+    ]);
+
+    res.json({ message: "Password reset successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 /* ================= AUTH MIDDLEWARE ================= */

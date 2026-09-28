@@ -22,6 +22,7 @@ import {
 import { FiTrendingUp } from "react-icons/fi";
 
 import LoginModal from "../Components/Modals/LoginModal";
+import ForgotPasswordModal from "../Components/Modals/ForgotPasswordModal"; // <-- ADDED
 import BrandLogo from "../Components/Brand/BrandLogo";
 import { useToast } from "../Context/ToastContext";
 
@@ -200,6 +201,7 @@ export default function Welcome() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false); // <-- ADDED
   const [redirectAfterLogin, setRedirectAfterLogin] = useState(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
@@ -1181,16 +1183,29 @@ export default function Welcome() {
 
       {/* LOGIN MODAL */}
       <LoginModal
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  onLogin={handleLogin}
-  email={email}
-  setEmail={setEmail}
-  password={password}
-  setPassword={setPassword}
-  loading={loading}
-  darkMode={darkMode}
-/>
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onLogin={handleLogin}
+        onForgotPassword={() => {
+          // Swap Login for Forgot-Password so only one modal shows at a time.
+          setIsModalOpen(false);
+          setIsForgotModalOpen(true);
+        }}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        loading={loading}
+        darkMode={darkMode}
+      />
+
+      {/* FORGOT PASSWORD MODAL */}
+      <ForgotPasswordModal
+        isOpen={isForgotModalOpen}
+        onClose={() => setIsForgotModalOpen(false)}
+        onBackToLogin={() => setIsModalOpen(true)}
+        darkMode={darkMode}
+      />
     </div>
   );
 }
